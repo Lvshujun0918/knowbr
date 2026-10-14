@@ -191,13 +191,56 @@ export interface Completeness {
   limitations: string[] | null
 }
 
+export interface EvidenceNeed {
+  name: string
+  required: boolean
+  present: boolean
+  impact: string
+  note: string
+}
+
+/** 一条被单独分析的学生主张（需求文档 2.1 / 2.7）。 */
+export interface Claim {
+  id: string
+  quote: string
+  knowledgePoint: string
+  taskType: string
+  status: string
+  statusLabel: string
+  judgment: string
+  reason: string
+  evidence: string
+  evidenceBoundary: string
+  nextQuestion: string
+  signals: string[] | null
+}
+
+/** 当前任务下的知识点状态：未涉及不等于未掌握。 */
+export interface KnowledgeItem {
+  code: string
+  name: string
+  status: string
+  statusLabel: string
+  note: string
+  required: boolean
+  applicable: boolean
+}
+
 export interface Diagnosis {
+  taskType: string
+  taskTypeLabel: string
+  taskFocus: string[] | null
+  taskOffTopic: string[] | null
   categories: CategoryRef[]
   primaryCategory: string
   primaryCategoryName: string
   mainIssue: string
   evidence: string[]
   evidenceSource: string[]
+  evidenceNeeds: EvidenceNeed[] | null
+  claims: Claim[] | null
+  knowledge: KnowledgeItem[] | null
+  primaryClaimId: string
   reasoning: string
   masteryStatus: string
   masteryLabel: string
@@ -224,6 +267,9 @@ export interface Hint {
   archetypeCode?: string
   socratic: boolean
   requestedByStudent: boolean
+  why?: string
+  targetKnowledge?: string
+  addressesClaim?: string
 }
 
 export interface Revision {
@@ -265,8 +311,14 @@ export interface RubricFeedback {
 export interface TransferState {
   itemId: string
   topic: string
+  scenario: string
+  knowledgePoint: string
+  taskType: string
+  taskTypeLabel: string
   context: string
   question: string
+  requiredData: string[] | null
+  answerRequirement: string
   maxScore: number
   rubric: RubricDimRef[]
   answer?: string
@@ -279,6 +331,16 @@ export interface TransferState {
   scoredAt?: string
   completed: boolean
   disclaimer: string
+  generationNote: string
+  source: string
+  sourceLabel: string
+  variantCode?: string
+  familyLabel?: string
+  paramsUsed?: Record<string, string> | null
+  selectionReason: string
+  dedupNote: string
+  comparedItems: string[] | null
+  similarityMax: number
   matchedKeywords: string[] | null
   missingPoints: string[] | null
 }
@@ -288,12 +350,21 @@ export interface TransferState {
 export interface TransferSummary {
   itemId: string
   topic: string
+  scenario: string
+  taskType: string
+  taskTypeLabel: string
+  knowledgePoint: string
   question: string
   answer: string
   score: number
   maxScore: number
   scored: boolean
   completed: boolean
+  source: string
+  sourceLabel: string
+  selectionReason: string
+  dedupNote: string
+  generationNote: string
   rubricFeedback: RubricFeedback[] | null
   matchedKeywords: string[] | null
   missingPoints: string[] | null
@@ -310,6 +381,13 @@ export interface Summary {
   learningGoal: string
   initialExplanation: string
   keyEvidence: string[] | null
+  taskType: string
+  taskTypeLabel: string
+  claims: Claim[] | null
+  knowledge: KnowledgeItem[] | null
+  stillOpen: string[] | null
+  resolved: string[] | null
+  evidenceLimits: string[] | null
   mainIssue: string
   issueEvidence: string[] | null
   diagnosisReasoning: string

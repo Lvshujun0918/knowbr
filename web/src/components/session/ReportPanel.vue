@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { api, exportUrl } from '../../api/client'
 import type { Session, Summary } from '../../types'
-import { copyText, errorMessage, formatDateTime, hintLevelLabel } from '../../lib/utils'
+import { copyText, errorMessage, formatDateTime, hintLevelLabel, claimStatusKind } from '../../lib/utils'
 import AlertBox from '../AlertBox.vue'
 import StateBlock from '../StateBlock.vue'
 
@@ -62,6 +62,43 @@ async function copyFeedback(): Promise<void> {
           <div class="card">
             <h2 class="card__title">本次学习目标</h2>
             <p>{{ summary.learningGoal }}</p>
+            <div class="tag-row">
+              <span class="tag tag--category">{{ summary.taskTypeLabel }}</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2 class="card__title">逐条主张诊断与知识点状态</h2>
+            <ol v-if="summary.claims && summary.claims.length > 0" class="claim-list">
+              <li v-for="c in summary.claims" :key="c.id" class="claim-list__item">
+                <div class="claim-list__head">
+                  <span class="tag" :class="`tag--${claimStatusKind(c.status)}`">{{ c.statusLabel }}</span>
+                  <span class="claim-list__point">{{ c.knowledgePoint }}</span>
+                </div>
+                <p class="claim-list__quote">{{ c.evidence }}</p>
+                <p class="claim-list__block"><strong>判断：</strong>{{ c.judgment }}</p>
+                <p class="claim-list__block"><strong>证据边界：</strong>{{ c.evidenceBoundary }}</p>
+              </li>
+            </ol>
+            <p v-else class="state-block__message">本次没有可拆分的学生主张。</p>
+            <template v-if="summary.knowledge && summary.knowledge.length > 0">
+              <h3 class="card__subtitle">知识点状态</h3>
+              <ul class="knowledge-list">
+                <li v-for="k in summary.knowledge" :key="k.code">
+                  <div class="knowledge-list__head">
+                    <span class="knowledge-list__name">{{ k.name }}</span>
+                    <span class="tag" :class="`tag--${claimStatusKind(k.status)}`">{{ k.statusLabel }}</span>
+                  </div>
+                  <p class="knowledge-list__note">{{ k.note }}</p>
+                </li>
+              </ul>
+            </template>
+            <template v-if="summary.evidenceLimits && summary.evidenceLimits.length > 0">
+              <h3 class="card__subtitle">材料限制</h3>
+              <ul class="list list--tight">
+                <li v-for="(e, i) in summary.evidenceLimits" :key="i">{{ e }}</li>
+              </ul>
+            </template>
           </div>
 
           <div class="card">
@@ -106,6 +143,11 @@ async function copyFeedback(): Promise<void> {
 
           <div v-if="summary.transfer" class="card">
             <h2 class="card__title">迁移测试表现</h2>
+            <div class="tag-row">
+              <span class="tag tag--category">{{ summary.transfer.taskTypeLabel }}</span>
+              <span v-if="summary.transfer.sourceLabel" class="tag tag--source">{{ summary.transfer.sourceLabel }}</span>
+              <span v-if="summary.transfer.knowledgePoint" class="tag tag--neutral">考查：{{ summary.transfer.knowledgePoint }}</span>
+            </div>
             <p class="report-transfer-q">{{ summary.transfer.question }}</p>
             <p>
               得分：<strong>{{ summary.transfer.scored ? `${summary.transfer.score} / ${summary.transfer.maxScore}` : '未评分' }}</strong>
@@ -142,12 +184,30 @@ async function copyFeedback(): Promise<void> {
               <summary>参考答案</summary>
               <p>{{ summary.transfer.referenceAnswer }}</p>
             </details>
+            <details class="transfer-my-answer">
+              <summary>这道题是怎么生成的？</summary>
+              <p v-if="summary.transfer.generationNote">{{ summary.transfer.generationNote }}</p>
+              <p v-if="summary.transfer.selectionReason">选题依据：{{ summary.transfer.selectionReason }}</p>
+              <p v-if="summary.transfer.dedupNote">重复检查：{{ summary.transfer.dedupNote }}</p>
+            </details>
           </div>
         </div>
 
         <aside class="panel-side">
           <div class="card">
             <h2 class="card__title">建议学生继续学习</h2>
+            <template v-if="summary.stillOpen && summary.stillOpen.length > 0">
+              <h3 class="card__subtitle">仍未解决</h3>
+              <ul class="list list--tight">
+                <li v-for="(s, i) in summary.stillOpen" :key="'o' + i">{{ s }}</li>
+              </ul>
+            </template>
+            <template v-if="summary.resolved && summary.resolved.length > 0">
+              <h3 class="card__subtitle">已经解决</h3>
+              <ul class="list list--tight">
+                <li v-for="(s, i) in summary.resolved" :key="'r' + i">{{ s }}</li>
+              </ul>
+            </template>
             <ul class="list list--tight">
               <li v-for="(s, i) in summary.studentNextSteps ?? []" :key="i">{{ s }}</li>
             </ul>

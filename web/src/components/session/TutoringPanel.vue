@@ -98,11 +98,13 @@ const busy = computed(() => hintPending.value !== 0 || revisionPending.value || 
                   <span class="tag tag--hint">{{ hintLevelLabel(item.hint.level) }}</span>
                   <span v-if="!item.hint.socratic" class="tag tag--warning">直接排障步骤</span>
                   <span v-if="item.hint.requestedByStudent" class="tag tag--neutral">学生主动请求</span>
+                  <span v-if="item.hint.targetKnowledge" class="tag tag--category">本轮目标：{{ item.hint.targetKnowledge }}</span>
                   <time class="chat__time">{{ formatDateTime(item.hint.createdAt) }}</time>
                 </div>
                 <div class="chat__bubble chat__bubble--hint">
                   <p v-for="(line, j) in item.hint.content.split('\n')" :key="j">{{ line }}</p>
                 </div>
+                <p v-if="item.hint.why" class="side-note">为什么给这一级：{{ item.hint.why }}</p>
               </template>
               <template v-else>
                 <div class="chat__meta">
@@ -155,7 +157,7 @@ const busy = computed(() => hintPending.value !== 0 || revisionPending.value || 
       <aside class="panel-side">
         <div class="card">
           <h2 class="card__title">获取提示</h2>
-          <p class="side-note">提示逐级加深：先观察方向，再概念解释，最后局部示例。</p>
+          <p class="side-note">提示逐级加深：先观察方向，再概念解释，最后局部示例。每级提示都会说明针对哪个知识点，并避开你已经掌握的内容。</p>
           <div class="stack">
             <button type="button" class="btn btn--secondary btn--block" :disabled="busy" @click="requestHint(1)">
               {{ hintPending === 1 ? '正在获取…' : '给我一级提示' }}

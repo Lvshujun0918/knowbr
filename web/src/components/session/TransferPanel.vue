@@ -90,16 +90,42 @@ const busy = computed(() => pending.value !== '')
           <h2 class="card__title">{{ transfer.topic }}</h2>
           <span class="tag tag--neutral">满分 {{ transfer.maxScore }} 分</span>
         </div>
+        <div class="tag-row">
+          <span class="tag tag--category">{{ transfer.taskTypeLabel }}</span>
+          <span class="tag tag--source">{{ transfer.sourceLabel }}</span>
+          <span v-if="transfer.knowledgePoint" class="tag tag--neutral">考查：{{ transfer.knowledgePoint }}</span>
+        </div>
+        <div v-if="transfer.scenario" class="transfer-context">情境：{{ transfer.scenario }}</div>
         <p class="transfer-context">{{ transfer.context }}</p>
         <p class="transfer-question">{{ transfer.question }}</p>
 
         <div class="transfer-rubric">
+          <h3 class="card__subtitle">必要背景与作答要求</h3>
+          <ul v-if="transfer.requiredData && transfer.requiredData.length > 0" class="list list--tight">
+            <li v-for="(d, i) in transfer.requiredData" :key="'d' + i">题干已提供：{{ d }}</li>
+          </ul>
+          <p v-if="transfer.answerRequirement" class="transfer-context">{{ transfer.answerRequirement }}</p>
           <h3 class="card__subtitle">评分维度（作答前可见）</h3>
           <ul class="list list--tight">
             <li v-for="dim in transfer.rubric" :key="dim.code">{{ dim.title }}</li>
           </ul>
         </div>
         <AlertBox kind="info">{{ transfer.disclaimer }}</AlertBox>
+        <details class="transfer-my-answer">
+          <summary>这道题是怎么生成的？</summary>
+          <p>{{ transfer.generationNote }}</p>
+          <p v-if="transfer.selectionReason">选题依据：{{ transfer.selectionReason }}</p>
+          <p v-if="transfer.dedupNote">重复检查：{{ transfer.dedupNote }}</p>
+          <p v-if="transfer.familyLabel">题目族：{{ transfer.familyLabel }}<span v-if="transfer.variantCode">（{{ transfer.variantCode }}）</span></p>
+          <div v-if="transfer.paramsUsed && Object.keys(transfer.paramsUsed).length > 0" class="tag-row">
+            <span class="tag-row__label">本次参数：</span>
+            <span v-for="(v, k) in transfer.paramsUsed" :key="k" class="tag tag--neutral">{{ k }} = {{ v }}</span>
+          </div>
+          <div v-if="transfer.comparedItems && transfer.comparedItems.length > 0" class="tag-row">
+            <span class="tag-row__label">已比对：</span>
+            <span v-for="(c, i) in transfer.comparedItems" :key="i" class="tag tag--neutral">{{ c }}</span>
+          </div>
+        </details>
       </div>
 
       <div v-if="!transfer.answered" class="card">

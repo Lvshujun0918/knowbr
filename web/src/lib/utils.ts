@@ -50,6 +50,26 @@ export function progressTagKind(progress: string): 'success' | 'warning' | 'neut
   }
 }
 
+/** 知识点状态 → 标签配色，与后端六种状态一一对应。 */
+export function claimStatusKind(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
+  switch (status) {
+    case 'mastered':
+      return 'success'
+    case 'partial':
+    case 'insufficient_evidence':
+      return 'warning'
+    case 'error':
+      return 'danger'
+    default:
+      return 'neutral'
+  }
+}
+
+/** 一知识点是否仍需学生处理：未涉及与不适用都不算缺陷。 */
+export function isOpenStatus(status: string): boolean {
+  return status === 'error' || status === 'partial' || status === 'insufficient_evidence'
+}
+
 export function hintLevelLabel(level: number): string {
   switch (level) {
     case 1:
