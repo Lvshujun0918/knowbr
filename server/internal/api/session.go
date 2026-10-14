@@ -38,10 +38,12 @@ func (s *Server) newSession(sub models.Submission) (*models.Session, error) {
 	}
 
 	input := services.DiagnoseInput{
+		ExperimentTitle:    sub.ExperimentTitle,
+		ExperimentGoal:     sub.ExperimentGoal,
+		ModelName:          sub.ModelName,
 		Explanation:        sub.StudentInitialExplanation,
 		Question:           sub.Question,
 		DatasetDescription: sub.DatasetDescription,
-		ExperimentGoal:     sub.ExperimentGoal,
 		MetricsText:        sub.MetricsText,
 		ExecutionLog:       sub.ExecutionLog,
 		CodeSnippet:        sub.CodeSnippet,
@@ -260,9 +262,20 @@ func (s *Server) AddHint(c *gin.Context) {
 	diag, _ := decodeJSON[services.Diagnosis](sess.DiagnosisJSON)
 	metrics, _ := decodeJSON[services.MatrixMetrics](sess.MetricsJSON)
 	hints, _ := decodeJSON[[]models.Hint](sess.HintsJSON)
+	revisions, _ := decodeJSON[[]models.Revision](sess.RevisionsJSON)
 	state, ok := decodeJSON[models.HintState](sess.HintStateJSON)
 	if !ok {
 		state = models.HintState{NextLevel: 1, MaxLevel: 3}
+	}
+
+	// 提示必须建立在你最新一次回答之上：先分析最新回答中的主张，再决定本轮只处理哪一点。
+	latestAnswer := ""
+	if len(revisions) > 0 {
+		latestAnswer = revisions[len(revisions)-1].Content
+	}
+	latestClaims := []services.Claim{}
+	if strings.TrimSpace(latestAnswer) != "" {
+		latestClaims = services.AnalyzeClaims(services.DiagnoseInput{Explanation: latestAnswer}, diag.TaskType, diag.Contradiction)
 	}
 
 	alreadyExists := false
@@ -278,6 +291,10 @@ func (s *Server) AddHint(c *gin.Context) {
 		Existing:           hints,
 		State:              state,
 		RequestedByStudent: body.RequestedByStudent,
+		TaskType:           diag.TaskType,
+		LatestAnswer:       latestAnswer,
+		LatestClaims:       latestClaims,
+		LogTail:            lastNonEmptyLine(sess.ExecutionLog),
 	})
 	if err != nil {
 		fail(c, 400, "HINT_LEVEL_INVALID", err.Error(), "提示等级只能是 1、2 或 3。")
@@ -376,8 +393,27 @@ func (s *Server) TransferQuestion(c *gin.Context) {
 	if len(archetypes) == 0 && diag.PrimaryArchetype != "" && diag.PrimaryArchetype != "NONE" {
 		archetypes = append(archetypes, diag.PrimaryArchetype)
 	}
-	item := services.SelectTransferItem(archetypes, nil)
+	// 题目必须限定在当前实验的任务类型内；旧记录没有任务类型时按通用任务处理。
+	taskType := diag.TaskType
+	if taskType == "" {
+		taskType = content.TaskGeneric
+	}
+	usedIDs, usedTopics := s.previousTransferHistory(sess.ID)
+	item, gen := services.GenerateTransfer(services.GenerateInput{
+		TaskType:       taskType,
+		Archetypes:     archetypes,
+		MasteredPoints: services.TransferMasteredPoints(diag),
+		FocusPoints:    services.TransferFocusPoints(taskType),
+		UsedItemIDs:    usedIDs,
+		UsedTopics:     usedTopics,
+		ExampleTexts:   content.ExampleScenarioTexts,
+		Seed:           sess.ID,
+	})
 	state := services.NewTransferState(item)
+	state.SelectionReason = gen.SelectionReason
+	state.DedupNote = gen.DedupNote
+	state.ComparedItems = gen.ComparedItems
+	state.SimilarityMax = gen.SimilarityMax
 	sess.TransferJSON = encodeJSON(state)
 	sess.Status = models.StatusTransfer
 	sess.UpdatedAt = time.Now().UTC()
@@ -411,12 +447,11 @@ func (s *Server) TransferAnswer(c *gin.Context) {
 		fail(c, 400, "TRANSFER_NOT_STARTED", "还没有生成迁移题，请先进入迁移测试。", "")
 		return
 	}
-	item, ok := content.TransferItemByID(current.ItemID)
+	scored, ok := services.ScoreTransferState(current, body.Answer)
 	if !ok {
-		fail(c, 500, "ITEM_MISSING", "迁移题题库中找不到对应题目。", current.ItemID)
+		fail(c, 500, "ITEM_MISSING", "找不到对应的迁移题，无法评分。", current.ItemID)
 		return
 	}
-	scored := services.ScoreTransfer(item, body.Answer)
 	scored.Completed = false
 	sess.TransferJSON = encodeJSON(scored)
 	sess.TransferScore = scored.Score
@@ -600,6 +635,28 @@ func metricsPtr(m services.MatrixMetrics) *services.MatrixMetrics {
 	return &m
 }
 
+// previousTransferHistory 汇总已保存记录中用过的迁移题，避免重复出题（需求文档 4.3 / 5 节）。
+func (s *Server) previousTransferHistory(excludeID string) ([]string, []string) {
+	list, err := s.store.List(0)
+	if err != nil {
+		return nil, nil
+	}
+	ids := []string{}
+	topics := []string{}
+	for i := range list {
+		if list[i].ID == excludeID {
+			continue
+		}
+		st, ok := decodeJSON[services.TransferState](list[i].TransferJSON)
+		if !ok || st.ItemID == "" {
+			continue
+		}
+		ids = append(ids, st.ItemID)
+		topics = append(topics, st.Topic)
+	}
+	return ids, topics
+}
+
 func countDemo(list []models.Session) (real, demo int) {
 	for _, s := range list {
 		if s.IsDemo {
@@ -609,6 +666,17 @@ func countDemo(list []models.Session) (real, demo int) {
 		}
 	}
 	return real, demo
+}
+
+// lastNonEmptyLine 返回文本最后一行非空内容，用于把提示绑定到学生提供的运行日志。
+func lastNonEmptyLine(s string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if l := strings.TrimSpace(lines[i]); l != "" {
+			return truncateForColumn(l, 120)
+		}
+	}
+	return ""
 }
 
 func truncateForColumn(s string, n int) string {

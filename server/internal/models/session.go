@@ -33,6 +33,8 @@ type Submission struct {
 }
 
 // Hint 是一条已提供的分层提示记录。
+// Why 与 TargetKnowledge 说明这一级提示为什么被选中、针对哪个知识点，
+// 便于学生与教师核对“提示是否与最新回答相关”（需求文档 4.2 / 7 节）。
 type Hint struct {
 	Level              int    `json:"level"`
 	Content            string `json:"content"`
@@ -40,6 +42,9 @@ type Hint struct {
 	ArchetypeCode      string `json:"archetypeCode,omitempty"`
 	Socratic           bool   `json:"socratic"`
 	RequestedByStudent bool   `json:"requestedByStudent"`
+	Why                string `json:"why,omitempty"`
+	TargetKnowledge    string `json:"targetKnowledge,omitempty"`
+	AddressesClaim     string `json:"addressesClaim,omitempty"`
 }
 
 // Revision 是学生提交的一次修正解释及其反馈。

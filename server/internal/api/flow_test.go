@@ -122,8 +122,12 @@ func demoSubmission(t *testing.T, id string) models.Submission {
 	return sub
 }
 
-const fullTransferAnswer = "阳性样本极少属于极端类别不平衡；本任务最怕漏诊（假阴性），所以主指标选阳性类的召回率，" +
-	"同时看精确率以避免大量误报，并查看混淆矩阵中假阳性和假阴性的具体数量，再按可接受的漏诊率与误报代价调整阈值。"
+// fullTransferAnswer 覆盖分类类迁移题的三个共同考查方向：数据分布与准确率局限、指标选择、错误代价与阈值。
+// 具体题目由规则模板按当前任务类型生成，同一任务下的不同情境共享这组考查方向。
+const fullTransferAnswer = "正样本只占很小比例，属于明显的类别不平衡，全部判成多数类也能得到很高的准确率，" +
+	"所以准确率具有误导性、不能反映模型是否可用。主指标应看召回率，同时用精确率监控反向错误带来的成本，" +
+	"必要时结合 PR 曲线而不是只盯一个数字。本任务中漏掉真正的目标样本代价更高，" +
+	"所以要按可接受的错误代价调整阈值，并在混淆矩阵中核对两类错误的具体数量。"
 
 // 端到端：演示案例 → 诊断 → 分层辅导 → 迁移测试 → 学习反馈 → 教师视图。
 func TestFullDemoFlowThroughHTTP(t *testing.T) {
@@ -204,8 +208,27 @@ func TestFullDemoFlowThroughHTTP(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("生成迁移题失败：%d %s", rec.Code, rec.Body.String())
 	}
-	if digStr(t, tq, "transfer", "itemId") != "T1" {
-		t.Errorf("命中 E1 应给出 T1，实际 %s", digStr(t, tq, "transfer", "itemId"))
+	// 迁移题必须限定在当前实验的任务类型内，并说明来源、选择理由与去重检查结果。
+	if got := digStr(t, tq, "transfer", "itemId"); got == "T1" {
+		t.Error("不得把演示与提示中已经出现过的疾病筛查示例原样当作迁移题")
+	}
+	if got := digStr(t, tq, "transfer", "taskType"); got != "classification_metrics" {
+		t.Errorf("迁移题必须限定在本次实验的任务类型内，实际 %q", got)
+	}
+	if got := digStr(t, tq, "transfer", "source"); got == "" {
+		t.Error("必须标注题目来源类型（规则模板 / 固定题库）")
+	}
+	if got := digStr(t, tq, "transfer", "generationNote"); !strings.Contains(got, "规则模板") {
+		t.Errorf("必须说明题目由规则模板组合生成，而不是模型动态生成：%s", got)
+	}
+	if got := digStr(t, tq, "transfer", "selectionReason"); !strings.Contains(got, "任务类型") {
+		t.Errorf("必须说明选这道题的依据：%s", got)
+	}
+	if got := digStr(t, tq, "transfer", "dedupNote"); !strings.Contains(got, "相似度") {
+		t.Errorf("必须给出与示例情境/历史题目的重复检查说明：%s", got)
+	}
+	if got := digNum(t, tq, "transfer", "similarityMax"); got >= 0.45 {
+		t.Errorf("与示例情境的相似度 %.2f 达到了重复阈值，不应被选为迁移题", got)
 	}
 	if len(digList(t, tq, "transfer", "rubric")) != 3 {
 		t.Error("迁移题应展示 3 个评分维度")
@@ -323,11 +346,13 @@ func TestFullDemoFlowThroughHTTP(t *testing.T) {
 func TestAllDemoCasesProduceUsableDiagnosis(t *testing.T) {
 	h := newTestHandler(t, filepath.Join(t.TempDir(), "democases.db"))
 	wantArchetype := map[string]string{
-		"case-imbalance":      "E1",
-		"case-misread-matrix": "E2",
-		"case-run-only":       "E5",
-		"case-env-error":      "E0",
-		"case-accuracy-only":  "NONE",
+		"case-imbalance":       "E1",
+		"case-misread-matrix":  "E2",
+		"case-run-only":        "E5",
+		"case-env-error":       "E0",
+		"case-accuracy-only":   "NONE",
+		"case-mlp-cnn":         "E8",
+		"case-rnn-instability": "E6",
 	}
 	for _, c := range content.DemoCases {
 		t.Run(c.ID, func(t *testing.T) {

@@ -13,29 +13,52 @@ type RubricDim struct {
 
 // TransferItem 是一道新情境迁移题。
 type TransferItem struct {
-	ID              string      `json:"id"`
-	Topic           string      `json:"topic"`
-	Archetypes      []string    `json:"archetypes"`
-	Context         string      `json:"context"`
-	Question        string      `json:"question"`
-	MaxScore        int         `json:"maxScore"`
-	Rubric          []RubricDim `json:"rubric"`
-	ExpectedPoints  []string    `json:"expectedPoints"`
-	ReferenceAnswer string      `json:"referenceAnswer"`
+	ID                string            `json:"id"`
+	Topic             string            `json:"topic"`
+	Scenario          string            `json:"scenario"`
+	KnowledgePoint    string            `json:"knowledgePoint"`
+	TaskType          string            `json:"taskType"`
+	Archetypes        []string          `json:"archetypes"`
+	ExampleScenario   string            `json:"exampleScenario,omitempty"`
+	Context           string            `json:"context"`
+	Question          string            `json:"question"`
+	RequiredData      []string          `json:"requiredData"`
+	AnswerRequirement string            `json:"answerRequirement"`
+	MaxScore          int               `json:"maxScore"`
+	Rubric            []RubricDim       `json:"rubric"`
+	ExpectedPoints    []string          `json:"expectedPoints"`
+	ReferenceAnswer   string            `json:"referenceAnswer"`
+	Source            string            `json:"source"`
+	VariantCode       string            `json:"variantCode,omitempty"`
+	FamilyCode        string            `json:"familyCode,omitempty"`
+	FamilyLabel       string            `json:"familyLabel,omitempty"`
+	ParamsUsed        map[string]string `json:"paramsUsed,omitempty"`
 }
 
 // TransferDisclaimer 是评分口径声明，必须随分数一起展示。
 const TransferDisclaimer = "评分由内置规则根据关键词与要点覆盖情况计算，仅代表本次演示任务的规则化反馈，不等于经过验证的心理测量或正式考试成绩。"
 
+// TransferGenerationNotice 说明题目的生成方式，避免把模板组合说成开放式动态生成。
+const TransferGenerationNotice = "本题由内置规则模板按当前实验的任务类型与你的未解决问题组合生成（未调用大模型）：情境与数据条件由模板参数决定，因此同一场会话重复进入会得到同一道题，不同任务与学生薄弱点会得到不同的题。"
+
 // TransferItems 是迁移题题库。题目与讲解案例的学习目标相关，但改变了类别分布、错误代价或任务目标。
 var TransferItems = []TransferItem{
 	{
-		ID:         "T1",
-		Topic:      "类别不平衡下的指标选择（疾病筛查）",
-		Archetypes: []string{"E1", "E3", "E4"},
-		Context:    "另一个疾病筛查任务中，阳性样本很少（约占 1%）。如果模型把绝大多数样本预测为阴性，整体准确率仍然可能很高。",
-		Question:   "此时除了准确率，还应重点查看哪些信息？为什么？请结合“漏诊与误报的代价不同”说明你的选择。",
-		MaxScore:   6,
+		ID:             "T1",
+		Topic:          "类别不平衡下的指标选择（疾病筛查）",
+		Scenario:       "疾病筛查（示例情境）",
+		KnowledgePoint: "任务目标与错误代价决定评价指标",
+		TaskType:       TaskClassification,
+		// T1 与演示案例、三级提示中的筛查示例属于同一情境，生成时会被降权。
+		ExampleScenario: "疾病筛查：阳性样本约占百分之一，漏诊的代价明显高于一次误报。",
+		Source:          SourceFixedBank,
+		VariantCode:     "T1",
+		FamilyCode:      "LEGACY",
+		FamilyLabel:     "内置固定题库",
+		Archetypes:      []string{"E1", "E3", "E4"},
+		Context:         "另一个疾病筛查任务中，阳性样本很少（约占 1%）。如果模型把绝大多数样本预测为阴性，整体准确率仍然可能很高。",
+		Question:        "此时除了准确率，还应重点查看哪些信息？为什么？请结合“漏诊与误报的代价不同”说明你的选择。",
+		MaxScore:        6,
 		Rubric: []RubricDim{
 			{
 				Code:     "goal",
@@ -83,12 +106,20 @@ var TransferItems = []TransferItem{
 		ReferenceAnswer: "除准确率外，应重点查看阳性类的召回率、精确率以及混淆矩阵中的假阴性与假阳性数量。原因是：本任务中漏诊（假阴性）的代价明显高于一次误报，而阳性样本占比极低时，全部预测为阴性也能得到很高的准确率，因此准确率无法反映模型是否完成了筛查任务。一般做法是以阳性类召回率为主要指标，同时用精确率或 PR 曲线评估误报带来的额外成本，再根据可接受的漏诊率确定判别阈值。",
 	},
 	{
-		ID:         "T2",
-		Topic:      "多分类混淆矩阵的读图（垃圾分类）",
-		Archetypes: []string{"E2", "E3"},
-		Context:    "把同一个分类流程迁移到四分类的垃圾分类任务（类别：可回收物、厨余、有害、其他），总体准确率 82%。其中“有害垃圾”有 120 个样本、召回率 35%，大部分被预测为“其他”。",
-		Question:   "请说明这份混淆矩阵中你最需要关注哪些位置？这些位置对应什么实际风险？如果要改进，你会优先处理哪一类？",
-		MaxScore:   6,
+		ID:              "T2",
+		Topic:           "多分类混淆矩阵的读图（垃圾分类）",
+		Scenario:        "垃圾分类四分类（示例情境）",
+		KnowledgePoint:  "混淆矩阵非对角元素的含义",
+		TaskType:        TaskClassification,
+		ExampleScenario: "垃圾分类：有害垃圾一百二十个样本，召回率百分之三十五，大部分被预测为其他。",
+		Source:          SourceFixedBank,
+		VariantCode:     "T2",
+		FamilyCode:      "LEGACY",
+		FamilyLabel:     "内置固定题库",
+		Archetypes:      []string{"E2", "E3"},
+		Context:         "把同一个分类流程迁移到四分类的垃圾分类任务（类别：可回收物、厨余、有害、其他），总体准确率 82%。其中“有害垃圾”有 120 个样本、召回率 35%，大部分被预测为“其他”。",
+		Question:        "请说明这份混淆矩阵中你最需要关注哪些位置？这些位置对应什么实际风险？如果要改进，你会优先处理哪一类？",
+		MaxScore:        6,
 		Rubric: []RubricDim{
 			{
 				Code:     "goal",
@@ -136,12 +167,20 @@ var TransferItems = []TransferItem{
 		ReferenceAnswer: "应重点关注“真实为有害垃圾”这一行中所有非对角线元素，它们表示有害垃圾被误判为“其他”等类别的数量；120 个样本中召回率 35%，意味着约 78 个有害垃圾没有被正确识别。由于该项误分类后果最严重，应优先处理：可通过调整类别权重、过采样或阈值调整提升该类召回率，同时用宏平均 F1 或逐类精确率监控是否带来大量新的误报。仅看 82% 的整体准确率无法发现这一问题。",
 	},
 	{
-		ID:         "T3",
-		Topic:      "结论适用边界（代码可运行的边界）",
-		Archetypes: []string{"E5", "E0"},
-		Context:    "一名同学把实验代码复制到另一份数据上，代码同样“运行成功”，但数据只有 60 条、“异常”类别只有 3 条。",
-		Question:   "请说明这份新结果在什么条件下才可信，并给出你会主动检查的两项内容及原因。",
-		MaxScore:   6,
+		ID:              "T3",
+		Topic:           "结论适用边界（代码可运行的边界）",
+		Scenario:        "小样本外推（示例情境）",
+		KnowledgePoint:  "结论的适用边界与样本量",
+		TaskType:        TaskGeneric,
+		ExampleScenario: "把实验代码复制到只有六十条数据、异常类只有三条的新数据上，代码同样运行成功。",
+		Source:          SourceFixedBank,
+		VariantCode:     "T3",
+		FamilyCode:      "LEGACY",
+		FamilyLabel:     "内置固定题库",
+		Archetypes:      []string{"E5", "E0"},
+		Context:         "一名同学把实验代码复制到另一份数据上，代码同样“运行成功”，但数据只有 60 条、“异常”类别只有 3 条。",
+		Question:        "请说明这份新结果在什么条件下才可信，并给出你会主动检查的两项内容及原因。",
+		MaxScore:        6,
 		Rubric: []RubricDim{
 			{
 				Code:     "goal",

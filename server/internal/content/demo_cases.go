@@ -141,6 +141,62 @@ ModuleNotFoundError: No module named 'sklearn'`,
 			Question:                  "环境问题应该先装包还是先改代码？",
 		},
 	},
+	{
+		ID:          "case-mlp-cnn",
+		Name:        "案例六：MLP 与 CNN 图像分类对比（模型结构，模拟数据）",
+		Description: "学生把准确率差距归因于“结构更复杂”，并认为继续加层就一定能超过 CNN。用于演示同一份回答中多个不同推理问题被分别诊断。",
+		DataNotice:  DemoDataNotice,
+		ExpectedFocus: []string{
+			"把复杂度与准确率建立必然因果",
+			"认为增加模型容量必然提升性能",
+			"把单一测试集准确率等同于泛化能力",
+		},
+		Submission: DemoSubmission{
+			ExperimentTitle:    "MLP 与 CNN 图像分类模型对比实验",
+			ExperimentGoal:     "在同一图像数据集上训练 MLP 与 CNN，比较两者的分类表现并解释差异来源。",
+			DatasetDescription: "图像分类数据集共 10000 张图，训练集 8000 张、测试集 2000 张，10 个类别（模拟数据）。",
+			ModelName:          "MLP（两个隐藏层，全连接）与 CNN（两层卷积 + 全连接）",
+			CodeSnippet: `mlp = MLP(hidden=[256, 128]).fit(X_train_flat, y_train)   # 图像先展平为一维向量
+cnn = CNN(conv_layers=2).fit(X_train, y_train)            # 保留图像空间结构
+print(mlp.score(X_test_flat, y_test), cnn.score(X_test, y_test))`,
+			ExecutionLog: `MLP  test_accuracy = 0.72   params = 610000
+CNN  test_accuracy = 0.92   params = 31000
+（以上为人工构造的模拟教学数据，不是真实训练结果）`,
+			MetricsText:               "MLP 测试准确率 0.72，参数量约 61 万；CNN 测试准确率 0.92，参数量约 3.1 万（模拟数据）。",
+			StudentInitialExplanation: "CNN 的准确率比 MLP 高 20 个百分点，说明 CNN 的网络结构更复杂，所以准确率一定更高。如果继续增加 MLP 的隐藏层和神经元数量，它的准确率就一定能超过 CNN。只要测试集准确率提高，就说明模型的泛化能力更强，不需要再分析其他指标。",
+			Question:                  "我是不是只要把 MLP 继续加深就行了？",
+		},
+	},
+	{
+		ID:          "case-rnn-instability",
+		Name:        "案例七：RNN 训练损失异常与梯度裁剪（训练稳定性，模拟数据）",
+		Description: "逐轮日志显示损失与梯度范数快速增大并出现 NaN。用于演示训练稳定性任务不会转向分类指标，而是要求区分日志中的事实、推断与未知信息。",
+		DataNotice:  DemoDataNotice,
+		ExpectedFocus: []string{
+			"引用日志中损失与梯度范数的具体数值",
+			"梯度爆炸只是有依据的假设，尚未证实",
+			"需要单变量对照实验才能区分原因",
+		},
+		Submission: DemoSubmission{
+			ExperimentTitle:    "RNN 训练损失异常与梯度裁剪实验",
+			ExperimentGoal:     "判断 RNN 训练过程是否稳定，并分析损失异常的原因。",
+			DatasetDescription: "字符级语料 5000 行，词表大小 128（模拟数据）。",
+			ModelName:          "单层 RNN（hidden=128），学习率 0.5，未使用梯度裁剪",
+			CodeSnippet: `for epoch in range(1, 6):
+    loss = train_one_epoch(model, loader, optimizer)   # lr=0.5，未加梯度裁剪
+    grad_norm = compute_grad_norm(model)
+    print("epoch", epoch, "train_loss", round(loss, 2), "grad_norm", round(grad_norm, 1))`,
+			ExecutionLog: `epoch 1 train_loss=1.92 grad_norm=3.1
+epoch 2 train_loss=2.05 grad_norm=6.7
+epoch 3 train_loss=2.37 grad_norm=18.9
+epoch 4 train_loss=6.84 grad_norm=95.3
+epoch 5 train_loss=nan grad_norm=nan
+（以上为人工构造的模拟教学数据，不是真实训练结果）`,
+			MetricsText:               "训练损失与梯度范数见运行日志（模拟数据）。",
+			StudentInitialExplanation: "可能发生了梯度爆炸，学习率 0.5 也许让问题更严重。但我不确定能不能仅凭这份日志确定根本原因。",
+			Question:                  "我该怎么判断是不是梯度爆炸？还需要补什么实验？",
+		},
+	},
 }
 
 // DemoCaseByID 按编号查找演示案例。

@@ -19,12 +19,21 @@ type MasteryStatusRef struct {
 type TransferSummary struct {
 	ItemID          string           `json:"itemId"`
 	Topic           string           `json:"topic"`
+	Scenario        string           `json:"scenario"`
+	TaskType        string           `json:"taskType"`
+	TaskTypeLabel   string           `json:"taskTypeLabel"`
+	KnowledgePoint  string           `json:"knowledgePoint"`
 	Question        string           `json:"question"`
 	Answer          string           `json:"answer"`
 	Score           int              `json:"score"`
 	MaxScore        int              `json:"maxScore"`
 	Scored          bool             `json:"scored"`
 	Completed       bool             `json:"completed"`
+	Source          string           `json:"source"`
+	SourceLabel     string           `json:"sourceLabel"`
+	SelectionReason string           `json:"selectionReason"`
+	DedupNote       string           `json:"dedupNote"`
+	GenerationNote  string           `json:"generationNote"`
 	RubricFeedback  []RubricFeedback `json:"rubricFeedback"`
 	MatchedKeywords []string         `json:"matchedKeywords"`
 	MissingPoints   []string         `json:"missingPoints"`
@@ -37,6 +46,13 @@ type Summary struct {
 	LearningGoal        string           `json:"learningGoal"`
 	InitialExplanation  string           `json:"initialExplanation"`
 	KeyEvidence         []string         `json:"keyEvidence"`
+	TaskType            string           `json:"taskType"`
+	TaskTypeLabel       string           `json:"taskTypeLabel"`
+	Claims              []Claim          `json:"claims"`
+	Knowledge           []KnowledgeItem  `json:"knowledge"`
+	StillOpen           []string         `json:"stillOpen"`
+	Resolved            []string         `json:"resolved"`
+	EvidenceLimits      []string         `json:"evidenceLimits"`
 	MainIssue           string           `json:"mainIssue"`
 	IssueEvidence       []string         `json:"issueEvidence"`
 	DiagnosisReasoning  string           `json:"diagnosisReasoning"`
@@ -118,12 +134,21 @@ func BuildSummary(in SummaryInput) Summary {
 		ts := &TransferSummary{
 			ItemID:          in.Transfer.ItemID,
 			Topic:           in.Transfer.Topic,
+			Scenario:        in.Transfer.Scenario,
+			TaskType:        in.Transfer.TaskType,
+			TaskTypeLabel:   in.Transfer.TaskTypeLabel,
+			KnowledgePoint:  in.Transfer.KnowledgePoint,
 			Question:        in.Transfer.Question,
 			Answer:          in.Transfer.Answer,
 			Score:           in.Transfer.Score,
 			MaxScore:        in.Transfer.MaxScore,
 			Scored:          in.Transfer.Answered,
 			Completed:       in.Transfer.Completed,
+			Source:          in.Transfer.Source,
+			SourceLabel:     in.Transfer.SourceLabel,
+			SelectionReason: in.Transfer.SelectionReason,
+			DedupNote:       in.Transfer.DedupNote,
+			GenerationNote:  in.Transfer.GenerationNote,
 			RubricFeedback:  nonEmptyRubricFeedback(in.Transfer.RubricFeedback),
 			MatchedKeywords: nonEmptyStrings(in.Transfer.MatchedKeywords),
 			MissingPoints:   nonEmptyStrings(in.Transfer.MissingPoints),
@@ -135,6 +160,29 @@ func BuildSummary(in SummaryInput) Summary {
 	}
 	if in.IsDemo {
 		s.DataNotice = in.DataNotice
+	}
+	s.TaskType = in.Diagnosis.TaskType
+	s.TaskTypeLabel = in.Diagnosis.TaskTypeLabel
+	s.Claims = nonEmptyClaims(in.Diagnosis.Claims)
+	s.Knowledge = nonEmptyKnowledge(in.Diagnosis.Knowledge)
+	// 只记录真实发生的过程：哪些主张仍未解决、哪些已解决、哪些材料确实缺失。
+	for _, c := range s.Claims {
+		switch c.Status {
+		case ClaimError, ClaimPartial, ClaimInsufficient:
+			s.StillOpen = append(s.StillOpen, fmt.Sprintf("%s（%s）：%s", c.KnowledgePoint, c.StatusLabel, c.Judgment))
+		case ClaimMastered:
+			s.Resolved = append(s.Resolved, c.KnowledgePoint)
+		}
+	}
+	for _, need := range in.Diagnosis.EvidenceNeeds {
+		if need.Present {
+			continue
+		}
+		kind := "可选材料"
+		if need.Required {
+			kind = "必需材料"
+		}
+		s.EvidenceLimits = append(s.EvidenceLimits, fmt.Sprintf("%s（%s）：%s", need.Name, kind, need.Impact))
 	}
 	s.StudentNextSteps = studentNextSteps(in)
 	s.TeacherNotes = teacherNotes(in)
@@ -161,6 +209,20 @@ func issueEvidence(d Diagnosis) []string {
 func nonEmptyStrings(in []string) []string {
 	if in == nil {
 		return []string{}
+	}
+	return in
+}
+
+func nonEmptyClaims(in []Claim) []Claim {
+	if in == nil {
+		return []Claim{}
+	}
+	return in
+}
+
+func nonEmptyKnowledge(in []KnowledgeItem) []KnowledgeItem {
+	if in == nil {
+		return []KnowledgeItem{}
 	}
 	return in
 }
@@ -203,6 +265,12 @@ func revisionSummary(revisions []models.Revision) (string, bool) {
 
 func studentNextSteps(in SummaryInput) []string {
 	steps := []string{}
+	for _, c := range in.Diagnosis.Claims {
+		switch c.Status {
+		case ClaimError, ClaimPartial, ClaimInsufficient:
+			steps = append(steps, fmt.Sprintf("仍未解决：%s —— %s", c.KnowledgePoint, c.NextQuestion))
+		}
+	}
 	if in.Transfer != nil && in.Transfer.Answered {
 		if len(in.Transfer.MissingPoints) > 0 {
 			steps = append(steps, "迁移测试中仍不足的方面："+strings.Join(in.Transfer.MissingPoints, "、")+"，建议针对性重做一次。")
@@ -223,7 +291,11 @@ func knowledgePoint(in SummaryInput) string {
 	if a, ok := archetypeByCode(in.Diagnosis.PrimaryArchetype); ok {
 		return a.KnowledgePoint
 	}
-	return "准确率、召回率、精确率与混淆矩阵的关系"
+	// 没有命中规则时，回到当前任务类型自己的知识点，而不是默认分类指标。
+	if tt, ok := content.TaskTypeByCode(in.Diagnosis.TaskType); ok && len(tt.FocusKnowledge) > 0 {
+		return strings.Join(firstN(tt.FocusKnowledge, 3), "、")
+	}
+	return "当前实验目标所要求的关键知识点"
 }
 
 func teacherNotes(in SummaryInput) []string {
@@ -251,6 +323,7 @@ func teacherNotes(in SummaryInput) []string {
 func teacherSummary(s *Summary, in SummaryInput) string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("【学习摘要｜%s】\n", in.Session.ExperimentTitle))
+	b.WriteString(fmt.Sprintf("任务类型：%s\n", s.TaskTypeLabel))
 	b.WriteString(fmt.Sprintf("学习目标：%s\n", s.LearningGoal))
 	b.WriteString(fmt.Sprintf("主要误区：%s\n", s.MainIssue))
 	if len(s.IssueEvidence) > 0 {
@@ -262,12 +335,25 @@ func teacherSummary(s *Summary, in SummaryInput) string {
 		b.WriteString("已提供提示：无\n")
 	}
 	b.WriteString("修正情况：" + s.RevisionSummary + "\n")
+	if len(s.StillOpen) > 0 {
+		b.WriteString("仍未解决：" + strings.Join(firstN(s.StillOpen, 3), "；") + "\n")
+	} else if len(s.Claims) > 0 {
+		b.WriteString("仍未解决：无（本次提交的主张均已解决）\n")
+	}
+	if len(s.EvidenceLimits) > 0 {
+		b.WriteString("材料限制：" + strings.Join(firstN(s.EvidenceLimits, 2), "；") + "\n")
+	}
 	if s.Transfer != nil && s.Transfer.Scored {
-		b.WriteString(fmt.Sprintf("迁移题表现：%d/%d 分（%s）。", s.Transfer.Score, s.Transfer.MaxScore, s.Transfer.Topic))
+		b.WriteString(fmt.Sprintf("迁移题表现：%d/%d 分（%s，任务类型：%s）。", s.Transfer.Score, s.Transfer.MaxScore, s.Transfer.Topic, s.Transfer.TaskTypeLabel))
+		if s.Transfer.SourceLabel != "" {
+			b.WriteString("题目来源：" + s.Transfer.SourceLabel + "。")
+		}
 		if len(s.Transfer.MissingPoints) > 0 {
 			b.WriteString("仍不足：" + strings.Join(s.Transfer.MissingPoints, "、") + "。")
 		}
 		b.WriteString("\n")
+	} else if s.Transfer != nil {
+		b.WriteString("迁移题表现：已生成题目但尚未作答，不产生评分结论。\n")
 	} else {
 		b.WriteString("迁移题表现：尚未完成\n")
 	}
@@ -304,8 +390,29 @@ func SummaryMarkdown(s Summary) string {
 	for _, e := range s.KeyEvidence {
 		b.WriteString("- " + e + "\n")
 	}
+	if len(s.EvidenceLimits) > 0 {
+		b.WriteString("\n### 材料限制（缺失或可补充的部分）\n")
+		for _, e := range s.EvidenceLimits {
+			b.WriteString("- " + e + "\n")
+		}
+	}
 	b.WriteString("\n## 三、主要误区\n" + s.MainIssue + "\n\n")
 	b.WriteString("诊断理由：" + s.DiagnosisReasoning + "\n\n")
+	if len(s.Claims) > 0 {
+		b.WriteString("### 逐条主张诊断\n")
+		for _, c := range s.Claims {
+			b.WriteString(fmt.Sprintf("- [%s] %s\n  - 学生证据：%s\n  - 判断：%s；原因：%s\n  - 证据边界：%s\n  - 下一步追问：%s\n",
+				c.StatusLabel, c.KnowledgePoint, c.Evidence, c.Judgment, c.Reason, c.EvidenceBoundary, c.NextQuestion))
+		}
+		b.WriteString("\n")
+	}
+	if len(s.Knowledge) > 0 {
+		b.WriteString("### 知识点状态\n")
+		for _, k := range s.Knowledge {
+			b.WriteString(fmt.Sprintf("- %s：%s（%s）\n", k.Name, k.StatusLabel, k.Note))
+		}
+		b.WriteString("\n")
+	}
 	if len(s.IssueEvidence) > 0 {
 		b.WriteString("支撑证据：\n")
 		for _, e := range s.IssueEvidence {
@@ -327,7 +434,20 @@ func SummaryMarkdown(s Summary) string {
 	if s.Transfer == nil {
 		b.WriteString("尚未进入迁移测试。\n\n")
 	} else {
-		b.WriteString("题目：" + s.Transfer.Question + "\n\n答案：" + s.Transfer.Answer + "\n\n")
+		b.WriteString("题目：" + s.Transfer.Question + "\n\n")
+		if s.Transfer.KnowledgePoint != "" {
+			b.WriteString("考查知识点：" + s.Transfer.KnowledgePoint + "\n\n")
+		}
+		if s.Transfer.SourceLabel != "" {
+			b.WriteString("题目来源：" + s.Transfer.SourceLabel + "（" + s.Transfer.Source + "）\n\n")
+		}
+		if s.Transfer.SelectionReason != "" {
+			b.WriteString("选题依据：" + s.Transfer.SelectionReason + "\n\n")
+		}
+		if s.Transfer.DedupNote != "" {
+			b.WriteString("重复检查：" + s.Transfer.DedupNote + "\n\n")
+		}
+		b.WriteString("答案：" + s.Transfer.Answer + "\n\n")
 		for _, f := range s.Transfer.RubricFeedback {
 			b.WriteString(fmt.Sprintf("- %s：%d/%d —— %s\n", f.Title, f.Score, f.MaxScore, f.Reason))
 		}

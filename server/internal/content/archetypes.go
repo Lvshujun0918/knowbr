@@ -54,6 +54,7 @@ type Archetype struct {
 	Code                  string         `json:"code"`
 	Name                  string         `json:"name"`
 	KnowledgePoint        string         `json:"knowledgePoint"`
+	TaskTypes             []string       `json:"taskTypes"` // 适用的任务类型；为空表示不限
 	Groups                []KeywordGroup `json:"-"`
 	Exclude               []string       `json:"-"`
 	RequiresImbalance     bool           `json:"-"`
@@ -82,6 +83,7 @@ var Archetypes = []Archetype{
 		Code:                  "E0",
 		Name:                  "环境或代码异常",
 		KnowledgePoint:        "运行环境、依赖与错误定位",
+		TaskTypes:             []string{TaskCodeEnv},
 		DirectTroubleshooting: true,
 		Exclude:               []string{"没有报错", "不报错", "无报错", "没有错误", "未报错", "without error", "no error"},
 		Groups: []KeywordGroup{
@@ -102,6 +104,7 @@ var Archetypes = []Archetype{
 		Code:              "E1",
 		Name:              "以整体准确率代替全部评价（忽视类别不平衡）",
 		KnowledgePoint:    "准确率在不平衡数据上的误导性、各类别召回率、混淆矩阵",
+		TaskTypes:         []string{TaskClassification},
 		RequiresImbalance: true,
 		Groups: []KeywordGroup{
 			{"准确率", "accuracy", "acc", "正确率"},
@@ -122,6 +125,7 @@ var Archetypes = []Archetype{
 		Code:           "E2",
 		Name:           "只关注混淆矩阵对角线",
 		KnowledgePoint: "混淆矩阵的非对角元素与类别间错误分布",
+		TaskTypes:      []string{TaskClassification},
 		Groups: []KeywordGroup{
 			{"对角线"},
 			{"只看", "只要", "只需要", "就够", "足够", "不用看", "不需要", "不用管", "忽略", "光看"},
@@ -141,6 +145,7 @@ var Archetypes = []Archetype{
 		Code:           "E3",
 		Name:           "假设各类别召回率大致相同",
 		KnowledgePoint: "分类器对多数类的偏向、逐类召回率比较",
+		TaskTypes:      []string{TaskClassification},
 		Groups: []KeywordGroup{
 			{"召回率", "recall", "查全率"},
 			{"差不多", "大致相同", "都一样", "一样", "都差不多", "应该相同", "不会差", "都高", "都很好", "很接近", "均衡"},
@@ -160,6 +165,7 @@ var Archetypes = []Archetype{
 		Code:           "E4",
 		Name:           "指标选择未结合任务目标",
 		KnowledgePoint: "漏报与误报的代价差异、指标与任务目标的匹配",
+		TaskTypes:      []string{TaskClassification},
 		Exclude:        []string{"漏报", "漏诊", "误报", "误诊", "代价", "成本", "任务目标", "业务", "风险", "召回率", "精确率"},
 		Groups: []KeywordGroup{
 			{"提高", "提升", "优化", "增加", "加大", "改进"},
@@ -180,6 +186,7 @@ var Archetypes = []Archetype{
 		Code:           "E5",
 		Name:           "把程序运行成功等同于掌握知识",
 		KnowledgePoint: "程序成功与概念掌握的区分、结果解释与迁移",
+		TaskTypes:      []string{TaskClassification, TaskArchitecture, TaskGeneric},
 		Groups: []KeywordGroup{
 			{"代码", "程序", "跑通", "运行成功", "能运行", "编译通过", "跑完", "顺利完成", "没有报错"},
 			{"学会", "掌握", "懂了", "会了", "没问题了", "学会了", "已经理解", "完成学习"},
@@ -194,5 +201,84 @@ var Archetypes = []Archetype{
 		NextStep:         "请写出本次实验结论的适用条件，并说出一个会让该结论不成立的数据情形。",
 		TransferItemIDs:  []string{"T3"},
 		TeacherCondition: "若学生无法说出任何适用边界，建议教师在实验课中增加“结果解释口述”环节。",
+	},
+	{
+		Code:           "E6",
+		Name:           "训练异常归因缺少可区分的检查",
+		KnowledgePoint: "训练损失与梯度范数的变化、假设与结论的区分",
+		TaskTypes:      []string{TaskTraining},
+		Groups: []KeywordGroup{
+			{"梯度爆炸", "梯度", "grad_norm", "梯度范数", "loss", "损失", "nan", "不稳定", "发散"},
+			{"可能", "也许", "不确定", "不能确定", "无法确定", "怀疑", "推测", "应该是", "肯定是", "一定是", "因为"},
+		},
+		Categories:      []string{CategoryInterpretation, CategoryDesign},
+		DiagnosisReason: "日志记录了损失与梯度范数的变化，这是事实；把原因归结为梯度爆炸或学习率偏高属于推断。当前材料还不能排除损失或数据中的非有限值、实现错误等同样会产生该现象的原因，也还没有提供能把这些原因区分开的检查结果，因此假设有依据但尚未证实。",
+		Hints: HintSet{
+			Level1: "先把日志拆成三类信息：第 3—5 轮记录了什么数值（事实）、你对原因的判断（推断）、以及日志里查不到的信息（未知）。请各写一行，并指出哪一项检查能把“梯度爆炸”与“损失或数据中出现非有限值”区分开。",
+			Level2: "梯度裁剪限制单步更新的幅度上限，学习率决定每次更新的基准尺度：两者都能抑制发散，但改变的不是同一件事——裁剪不改变更新方向，学习率改变步长。要把原因缩小到一个变量，需要单变量对照：固定其它设置，分别只调学习率、只加裁剪，并在训练前检查输入与损失是否出现非有限值，再比较 loss 与梯度范数的曲线。",
+			Level3: "局部示例（与你的训练稳定性问题同类型）：如果某轮梯度范数从 18.9 涨到 95.3、下一轮 loss 变成 NaN，可以确定的事实是“训练在该轮出现数值异常”，不能确定的是它由梯度爆炸、损失计算中的非有限值还是实现错误引起。最小对照可以这样设计：把学习率降为原来的十分之一再跑一次——若仍然出现 NaN，说明问题不只是学习率偏大；在训练循环里加一行断言检查输入与损失是否为有限值，可以排除数据或实现问题。",
+		},
+		NextStep:         "请按“事实 / 推断 / 未知”各写一行，并给出一个只改变单一变量的检查方案，说明什么结果会推翻“梯度爆炸”这一假设。",
+		TeacherCondition: "若学生连续两轮仍无法区分日志中的事实与推断，建议教师面谈演示一次单变量对照的排查过程。",
+	},
+	{
+		Code:           "E8",
+		Name:           "把模型复杂度当作准确率更高的必然原因",
+		KnowledgePoint: "全连接与卷积的结构差异",
+		TaskTypes:      []string{TaskArchitecture},
+		Groups: []KeywordGroup{
+			{"复杂", "复杂度", "参数多", "层数多", "更大"},
+			{"所以", "因此", "说明", "一定", "必然", "肯定", "导致", "就能"},
+		},
+		Categories:      []string{CategoryConcept, CategoryInterpretation},
+		DiagnosisReason: "把“结构更复杂”当成了准确率更高的原因，跳过了具体的结构差异。卷积与全连接的区别在于局部连接、权重共享以及对图像空间信息的利用，是否带来更好的分类效果需要由这些机制和对照结果来解释，而不是由“更复杂”直接推出。",
+		Hints: HintSet{
+			Level1: "先把这句话拆成两半：一半是你在结构上的判断，一半是“更复杂所以更准”的因果判断。哪一半是数据支持的？哪一半只是推断？",
+			Level2: "复杂度只说明假设空间更大，它既可能带来更强的拟合能力，也可能带来更高的过拟合风险。两个模型真正的结构差异在于：MLP 需要把图像展平成一维向量，空间关系被打破；CNN 通过局部连接与权重共享提取局部特征，参数随通道数增长而不是随像素数增长。",
+			Level3: "局部示例：若 CNN 用了 3 万个参数就达到 92%，而 MLP 用了 60 万个参数只有 85%，那“更复杂所以更准”就无法解释——参数更少的模型反而更好。请用你实验里的参数量与准确率数字做同样的比对，再说明结构差异在其中起什么作用。",
+		},
+		NextStep:         "请写出两个模型在结构上的两处具体差异，并说明每一处为什么可能影响图像分类效果。",
+		TransferItemIDs:  []string{},
+		TeacherCondition: "若学生仍以“模型更复杂”解释全部差异，建议教师在实验课上安排一次参数量与准确率的对照统计。",
+	},
+	{
+		Code:           "E9",
+		Name:           "认为增加模型容量必然提升性能",
+		KnowledgePoint: "模型容量与数据规模的匹配",
+		TaskTypes:      []string{TaskArchitecture},
+		Groups: []KeywordGroup{
+			{"增加", "加大", "继续加", "更多", "堆"},
+			{"隐藏层", "神经元", "层数", "参数", "容量"},
+			{"一定", "必然", "肯定", "就能", "超过", "保证"},
+		},
+		Categories:      []string{CategoryDesign, CategoryBoundary},
+		DiagnosisReason: "容量增大只提高拟合能力的上限，能否转化为测试表现的提升取决于数据规模、正则化与训练是否充分；在数据量有限时，容量增大往往先表现为训练集与测试集表现差距扩大，而不是整体变好。",
+		Hints: HintSet{
+			Level1: "如果给 MLP 增加隐藏层，你预期训练集准确率和测试集准确率分别会怎么变？为什么要分开看这两个数字？",
+			Level2: "模型容量、数据量、正则化三者共同决定泛化表现。只增加容量而不增加数据或正则化时，模型更容易把训练样本记住，训练集表现上升但测试集表现不一定上升。判断加层是否有效，需要同时记录训练集与测试集的表现，并保持数据划分一致。",
+			Level3: "局部示例：如果一个模型训练集准确率 99%、测试集 91%，而加层后训练集升到 100%、测试集降到 88%，说明增加的容量被用去记忆训练样本。请按这个格式写下你实验中的两个数字，再判断加层是否值得。",
+		},
+		NextStep:         "请写出增加容量后你会记录哪些对照数据，并说明哪一种结果会让你放弃“加层就能超过 CNN”的想法。",
+		TeacherCondition: "若学生无法说出训练集与测试集的区别，建议教师先补充一节过拟合与泛化的讲解。",
+	},
+	{
+		Code:           "E10",
+		Name:           "只用单一测试结果下结论，未比较训练集与测试集表现",
+		KnowledgePoint: "训练集与测试集表现差异（过拟合）",
+		TaskTypes:      []string{TaskArchitecture},
+		Exclude:        []string{"训练集", "过拟合", "泛化", "验证集"},
+		Groups: []KeywordGroup{
+			{"准确率", "accuracy", "测试集", "结果"},
+			{"最高", "更好", "超过", "所以", "说明"},
+		},
+		Categories:      []string{CategoryInterpretation, CategoryBoundary},
+		DiagnosisReason: "只用单一测试结果下结论时，无法区分“模型拟合能力更强”与“模型在新数据上表现更好”。要判断结构差异的影响，至少需要同时给出训练集与测试集上的表现。",
+		Hints: HintSet{
+			Level1: "这两个准确率分别是在哪个数据集上得到的？请把训练集与测试集的数字分别写出来，再比较差距。",
+			Level2: "训练集表现反映拟合能力，测试集表现反映在新数据上的效果，两者的差距才是判断过拟合的依据。只看一个测试数字，无法知道模型是把特征学到了还是把训练样本记住了。",
+			Level3: "局部示例：如果两个模型测试集都是 90%，一个训练集 91%、另一个训练集 100%，后者说明容量大量用于记忆训练样本。请按这个格式补全你实验中的四个数字（两模型 × 训练/测试）。",
+		},
+		NextStep:         "请补全两个模型在训练集与测试集上的表现，并说明差距说明了什么。",
+		TeacherCondition: "若学生无法区分训练集与测试集的作用，建议教师结合实验记录做一次逐项讲解。",
 	},
 }

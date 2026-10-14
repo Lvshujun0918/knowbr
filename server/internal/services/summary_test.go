@@ -8,10 +8,10 @@ import (
 
 func TestSummaryMasteryUsesRevisionAndTransfer(t *testing.T) {
 	in := SummaryInput{
-		Session: &models.Session{},
+		Session:   &models.Session{},
 		Diagnosis: Diagnosis{MasteryStatus: MasteryNotShown},
 		Revisions: []models.Revision{{Progress: "improved"}},
-		Transfer: &TransferState{Answered: true, Score: 6, MaxScore: 6},
+		Transfer:  &TransferState{Answered: true, Score: 6, MaxScore: 6},
 	}
 	if got := BuildSummary(in).Mastery.Status; got != MasteryDemonstrated {
 		t.Fatalf("修正并完成迁移后应体现理解，实际 %s", got)
