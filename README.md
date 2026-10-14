@@ -20,6 +20,38 @@
 
 ## 2. 安装与启动
 
+### Docker Compose 启动
+
+安装 Docker Engine / Docker Desktop 和 Docker Compose v2 后，在项目根目录运行：
+
+```bash
+docker compose up -d --build --wait
+```
+
+打开 <http://127.0.0.1:8080>。镜像会自动构建 Vue 前端与 Go 后端，无需在宿主机安装 Go、Node.js 或 pnpm。
+
+可选：复制 `.env.example` 为 `.env` 后调整 `ZXQ_PORT`（宿主机端口）和 `ZXQ_LLM_*`。Compose 会自动读取根目录 `.env`；容器内部端口、数据库和静态资源路径固定，不使用 `.env` 中的 `ZXQ_DB_PATH`、`ZXQ_WEB_DIST`。例如已有服务占用 8080 时：
+
+```bash
+ZXQ_PORT=8081 docker compose up -d --build --wait
+```
+
+如果构建时无法访问默认 Go 依赖源，可在 `.env` 设置 `GOPROXY=https://goproxy.cn,direct`，或运行：
+
+```bash
+GOPROXY=https://goproxy.cn,direct docker compose up -d --build --wait
+```
+
+SQLite 保存在 `knowbr-data` 命名卷中，容器重建和 `docker compose down` 不会删除学习记录。以下命令用于查看状态、日志和停止服务：
+
+```bash
+docker compose ps
+docker compose logs -f knowbr
+docker compose down
+```
+
+`docker compose down -v` 会删除命名卷及全部学习记录，只在需要清空容器数据时使用。源码更新后再次执行 `docker compose up -d --build --wait` 即可更新。
+
 ### 2.1 启动后端（端口 8080）
 
 ```bash
