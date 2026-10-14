@@ -88,7 +88,7 @@
   "matrix": [[900,0,0],[90,0,0],[10,0,0]],
   "metrics": MatrixMetrics | null,
   "diagnosis": Diagnosis,
-  "hints": [ {"level":1,"content":"…","createdAt":"…","archetypeCode":"E1","socratic":true,"requestedByStudent":false} ],
+  "hints": [ {"level":1,"content":"…","createdAt":"…","archetypeCode":"E1","socratic":true,"requestedByStudent":false,"why":"为什么选择这一级提示","targetKnowledge":"本轮针对的知识点","addressesClaim":"C1"} ],
   "hintState": { "nextLevel":1,"maxLevel":3,"usedLevels":[],"noProgressRounds":0,"teacherIntervention":false,"teacherReason":"" },
   "revisions": [ {"content":"…","createdAt":"…","feedback":"…","progress":"improved|partial|none","points":["…"],"addressedKeywords":["…"],"missingKeywords":["…"]} ],
   "transfer": TransferState | null,
@@ -100,11 +100,19 @@
 **Diagnosis**
 ```json
 {
+  "taskType": "classification_metrics|model_architecture|training_stability|code_environment|generic",
+  "taskTypeLabel": "训练稳定性与优化",
+  "taskFocus": ["本任务优先讨论的知识点"],
+  "taskOffTopic": ["本任务不应要求的其它任务知识点"],
   "categories": [{"code":"interpretation","label":"实验结果解释问题"}],
   "primaryCategory": "interpretation", "primaryCategoryName": "实验结果解释问题",
   "mainIssue": "一句话主要问题",
-  "evidence": ["由你提交的矩阵计算：总样本 1000 个…", "学生原话：…"],
-  "evidenceSource": ["混淆矩阵计算","学生输入"],
+  "evidence": ["由你提交的矩阵计算：总样本 1000 个…", "学生原话：…", "运行日志：epoch 4 train_loss=6.84 grad_norm=95.3"],
+  "evidenceSource": ["混淆矩阵计算","学生输入","运行日志"],
+  "evidenceNeeds": [{"name":"训练日志（含 loss 与梯度范数等数值）","required":true,"present":true,"impact":"缺失时限制的结论","note":"已提供，可以支撑当前任务的结论。"}],
+  "claims": [{"id":"C1","quote":"学生原话","knowledgePoint":"假设与结论的区分","taskType":"training_stability","status":"mastered|partial|error|insufficient_evidence|not_mentioned|not_applicable","statusLabel":"部分掌握","judgment":"判断","reason":"原因","evidence":"学生原话：…","evidenceBoundary":"证据边界","nextQuestion":"下一步追问","signals":["TR-HYPOTHESIS"]}],
+  "knowledge": [{"code":"K1","name":"单变量对照实验设计","status":"not_mentioned","statusLabel":"未涉及","note":"未涉及不等于未掌握…","required":true,"applicable":true}],
+  "primaryClaimId": "C1",
   "reasoning": "诊断理由",
   "masteryStatus": "demonstrated|partial|not_demonstrated|insufficient_evidence",
   "masteryLabel": "尚未体现",
@@ -118,6 +126,12 @@
   "generatedAt":"RFC3339","llmUsed":false,"llmNote":"","source":"rule|llm"
 }
 ```
+
+约定：
+
+- `taskType` 由提交材料判定（标题/目标、运行日志、代码、解释、数据描述加权），诊断、提示、迁移题与修正反馈都限定在该任务类型的知识范围内；训练稳定性任务不会要求混淆矩阵或分类指标。
+- `claims` 是学生的逐条主张，每条都带证据、判断、原因、证据边界与下一步追问；`knowledge` 使用六种状态，`not_mentioned` 不会被计入缺陷。
+- `evidenceNeeds` 区分必需与可选材料，缺失时 `impact` 说明限制了哪些结论。
 
 ### GET /api/sessions
 `{ ok, records:[RecordDTO], storage:{location,total,demoRecords,realRecords,note} }`
@@ -143,23 +157,41 @@ RecordDTO：`{ id, title, createdAt, updatedAt, status, statusLabel, mode, modeL
 - `POST /api/sessions/:id/transfer/reference` → `{ ok:true, transfer }`（未作答时 400 `ANSWER_REQUIRED`；作答后返回 `referenceAnswer` 与 `expectedPoints`）
 - `POST /api/sessions/:id/transfer/complete` → `{ ok:true, transfer, summary, markdown, session }`
 
+题目生成约定（规则模板组合生成，未调用大模型）：
+
+1. 先按当前实验的 `taskType` 选定题目族（分类指标 / 模型结构 / 训练稳定性 / 环境排障）；
+2. 在题目族内按学生命中的问题类型（`matchedArchetypes`）打分选变体，已掌握的知识点会被降权；
+3. 变体的情境与数据条件由模板参数决定，因此不同会话会得到不同情境与不同数据；
+4. 生成后与演示案例、提示示例以及本机保存的历史题目做字符二元组相似度检查（阈值 0.45），与示例情境相同的固定题会被降权；
+5. `itemId` 为固定题库编号（`T1`—`T3`）或生成编号（`<题目族>:<变体>:<参数序号>`），后者可按编号确定性重建，因此关键词与参考答案不进入学生记录。
+
 **TransferState**
 ```json
 {
-  "itemId":"T1","topic":"…","context":"…","question":"…","maxScore":6,
-  "rubric":[{"code":"goal","title":"识别任务目标与数据分布（0—2 分）","maxScore":2}],
+  "itemId":"TRN:TRN-4:2","topic":"…","scenario":"情境标签","knowledgePoint":"考查的知识点",
+  "taskType":"training_stability","taskTypeLabel":"训练稳定性与优化",
+  "context":"…","question":"…","requiredData":["题干已提供的数据"],"answerRequirement":"作答要求","maxScore":6,
+  "rubric":[{"code":"goal","title":"区分日志中的事实与推断（0—2 分）","maxScore":2}],
   "answer":"","answered":false,"score":0,"scoreLabel":"0 / 6",
   "rubricFeedback":[{"code","title","score","maxScore","reason","matchedKeywords":[]}],
   "referenceAnswer":"","expectedPoints":[],"scoredAt":"","completed":false,
-  "disclaimer":"评分由内置规则…","matchedKeywords":[],"missingPoints":[]
+  "disclaimer":"评分由内置规则…","generationNote":"本题由内置规则模板…未调用大模型",
+  "source":"rule_template|fixed_bank","sourceLabel":"规则模板组合生成",
+  "variantCode":"TRN-4","familyLabel":"训练稳定性与优化（规则模板）","paramsUsed":{"lrate":"0.1"},
+  "selectionReason":"选题依据（任务类型 + 命中的问题类型 + 避开已掌握内容）",
+  "dedupNote":"已与 6 条示例情境、N 道历史题目比对，最高相似度 0.00（阈值 0.45）",
+  "comparedItems":["示例情境 1","历史题目：…"],"similarityMax":0,
+  "matchedKeywords":[],"missingPoints":[]
 }
 ```
-`rubric` 与 `disclaimer` 在作答前也要展示；`referenceAnswer`/`expectedPoints` 只能在作答后出现。
+`rubric` 与 `disclaimer` 在作答前也要展示；`referenceAnswer`/`expectedPoints` 只能在作答后出现；`source` 必须与 `generationNote` 一起展示，避免把模板组合说成开放式动态生成。
 
 ### GET /api/sessions/:id/summary
 `{ ok, summary: Summary, markdown: "Markdown 文本", teacherSummary: "文本" }`
 
-**Summary**：`{ generatedAt, learningGoal, initialExplanation, keyEvidence[], mainIssue, issueEvidence[], diagnosisReasoning, categories[], hintLevels[], hintTrail[], revisionSummary, revisionImproved, revisionCount, transfer:{itemId,topic,question,answer,score,maxScore,scored,completed,rubricFeedback[],matchedKeywords[],missingPoints[],referenceAnswer}, mastery:{status,label}, studentNextSteps[], teacherNotes[], teacherSummary, mode, modeLabel, llmUsed, dataNotice, disclaimer, teacherIntervention }`
+**Summary**：`{ generatedAt, learningGoal, initialExplanation, keyEvidence[], taskType, taskTypeLabel, claims[], knowledge[], stillOpen[], resolved[], evidenceLimits[], mainIssue, issueEvidence[], diagnosisReasoning, categories[], hintLevels[], hintTrail[], revisionSummary, revisionImproved, revisionCount, transfer:{itemId,topic,scenario,taskType,taskTypeLabel,knowledgePoint,question,answer,score,maxScore,scored,completed,source,sourceLabel,selectionReason,dedupNote,generationNote,rubricFeedback[],matchedKeywords[],missingPoints[],referenceAnswer}, mastery:{status,label}, studentNextSteps[], teacherNotes[], teacherSummary, mode, modeLabel, llmUsed, dataNotice, disclaimer, teacherIntervention }`
+
+`stillOpen` / `resolved` 只来自真实发生的主张诊断；未使用提示、未提交的修正与未完成的迁移测试都会在反馈中写明「未使用 / 尚未完成」，不会写成已完成。
 
 ### GET /api/sessions/:id/export?format=md|txt&download=1
 返回 `text/markdown` 或 `text/plain`（前端可用 `?download=1` 直接触发下载，或取文本后自行复制）。
