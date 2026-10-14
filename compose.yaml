@@ -1,0 +1,26 @@
+services:
+  knowbr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
+    image: knowbr:local
+    ports:
+      - "${ZXQ_PORT:-8080}:8080"
+    environment:
+      ZXQ_PORT: "8080"
+      ZXQ_DB_PATH: /app/data/knowbr.db
+      ZXQ_WEB_DIST: /app/web/dist
+      ZXQ_DEBUG: ${ZXQ_DEBUG:-false}
+      ZXQ_LLM_API_KEY: ${ZXQ_LLM_API_KEY:-}
+      ZXQ_LLM_BASE_URL: ${ZXQ_LLM_BASE_URL:-https://api.openai.com/v1}
+      ZXQ_LLM_MODEL: ${ZXQ_LLM_MODEL:-gpt-4o-mini}
+      ZXQ_LLM_TIMEOUT_SECONDS: ${ZXQ_LLM_TIMEOUT_SECONDS:-20}
+      ZXQ_LLM_DISABLED: ${ZXQ_LLM_DISABLED:-false}
+    volumes:
+      - knowbr-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  knowbr-data:

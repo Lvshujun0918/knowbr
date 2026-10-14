@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.env.*
+server/data
+web/node_modules
+web/dist
+*.db
+*.db-shm
+*.db-wal
+*.log
+开发需求文档.md
