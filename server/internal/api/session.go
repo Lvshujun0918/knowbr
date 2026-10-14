@@ -349,6 +349,7 @@ func (s *Server) AddRevision(c *gin.Context) {
 		Diagnosis:          diag,
 		Metrics:            metricsPtr(metrics),
 		State:              state,
+		TaskType:           diag.TaskType,
 	})
 	revisions = append(revisions, res.Revision)
 	sess.RevisionsJSON = encodeJSON(revisions)
@@ -668,15 +669,24 @@ func countDemo(list []models.Session) (real, demo int) {
 	return real, demo
 }
 
-// lastNonEmptyLine 返回文本最后一行非空内容，用于把提示绑定到学生提供的运行日志。
+// lastNonEmptyLine 返回日志中带数值的最后一行，用于把提示绑定到学生提供的运行日志。
+// 只引用学生提交的内容，不做任何补全；尾部若只有说明文字（不含数值），会向前找到真正的数值行。
 func lastNonEmptyLine(s string) string {
 	lines := strings.Split(strings.TrimSpace(s), "\n")
+	fallback := ""
 	for i := len(lines) - 1; i >= 0; i-- {
-		if l := strings.TrimSpace(lines[i]); l != "" {
+		l := strings.TrimSpace(lines[i])
+		if l == "" {
+			continue
+		}
+		if fallback == "" {
+			fallback = l
+		}
+		if strings.ContainsAny(l, "0123456789") {
 			return truncateForColumn(l, 120)
 		}
 	}
-	return ""
+	return truncateForColumn(fallback, 120)
 }
 
 func truncateForColumn(s string, n int) string {

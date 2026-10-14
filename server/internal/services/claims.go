@@ -177,7 +177,7 @@ var claimRules = []claimRule{
 	{
 		Code:             "TR-NUMBER-ONLY",
 		TaskTypes:        []string{content.TaskTraining},
-		KnowledgePoint:   "训练日志的读数",
+		KnowledgePoint:   "训练损失与梯度范数的变化",
 		Groups:           []content.KeywordGroup{{"loss", "损失", "梯度", "grad_norm", "范数"}},
 		RequireNumber:    true,
 		Status:           ClaimPartial,
