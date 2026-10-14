@@ -1,0 +1,194 @@
+/* ============================================================
+   基础样式：reset、排版、表单控件、表格、焦点可见性
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-body);
+  color: var(--c-ink);
+  background-color: var(--c-bg);
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+  padding: 0;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+a {
+  color: var(--c-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: var(--c-ink);
+}
+
+/* 键盘焦点可见性 */
+:focus-visible {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* 表单控件基础 */
+.input,
+.textarea {
+  display: block;
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--r-md);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px var(--c-primary-soft);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--c-ink-3);
+}
+
+.input--sm {
+  width: auto;
+  display: inline-block;
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-small);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 3em;
+}
+
+.textarea--mono,
+.input--mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+/* 表格基础 */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+.table caption {
+  text-align: left;
+  padding-bottom: var(--sp-2);
+  color: var(--c-ink-3);
+  font-size: var(--fs-caption);
+}
+
+.table th,
+.table td {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  background: var(--c-surface-2);
+  font-weight: var(--fw-medium);
+  color: var(--c-ink-2);
+  white-space: nowrap;
+}
+
+.table tbody th {
+  font-weight: var(--fw-medium);
+  color: var(--c-ink-2);
+  background: var(--c-surface-2);
+}
+
+.table__nowrap {
+  white-space: nowrap;
+}
+
+.table__ellipsis {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table__diag {
+  background: var(--c-primary-faint);
+  font-weight: var(--fw-medium);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+/* 辅助文本 */
+.form-error {
+  color: var(--c-danger);
+  font-size: var(--fs-small);
+}
+
+.form-ok {
+  color: var(--c-success);
+  font-size: var(--fs-small);
+}
+
+.required-mark {
+  display: inline-block;
+  padding: 0 var(--sp-1);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  color: var(--c-danger);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--r-sm);
+  line-height: 1.5;
+  vertical-align: 1px;
+}

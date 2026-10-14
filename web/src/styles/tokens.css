@@ -1,0 +1,82 @@
+/* ============================================================
+   知行桥设计令牌：颜色 / 字体 / 字号 / 间距 / 圆角 / 阴影
+   所有组件只允许引用本文件中的变量。
+   ============================================================ */
+
+:root {
+  /* 颜色：品牌（深青，克制的高校教学工具气质） */
+  --c-primary: #0e5a52;
+  --c-primary-strong: #0a463f;
+  --c-primary-soft: #e1efeb;
+  --c-primary-faint: #f1f7f5;
+
+  /* 颜色：墨与纸 */
+  --c-bg: #f4f5f1;
+  --c-surface: #ffffff;
+  --c-surface-2: #fafaf6;
+  --c-ink: #1d2b27;
+  --c-ink-2: #44564f;
+  --c-ink-3: #6f7e77;
+  --c-line: #dee3dc;
+  --c-line-strong: #c6cec5;
+
+  /* 颜色：语义 */
+  --c-info: #2f6690;
+  --c-info-bg: #e9f1f8;
+  --c-success: #2f7a52;
+  --c-success-bg: #e6f2ea;
+  --c-warning: #8f5a10;
+  --c-warning-bg: #faf0dc;
+  --c-danger: #a63a2d;
+  --c-danger-bg: #f9eae7;
+
+  /* 字体 */
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+
+  /* 字号 */
+  --fs-caption: 0.75rem;   /* 12 */
+  --fs-small: 0.8125rem;   /* 13 */
+  --fs-body: 0.9375rem;    /* 15 */
+  --fs-h3: 1.0625rem;      /* 17 */
+  --fs-h2: 1.3125rem;      /* 21 */
+  --fs-h1: 1.6875rem;      /* 27 */
+  --fs-hero: 2.125rem;     /* 34 */
+
+  /* 字重与行高 */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
+  --lh-tight: 1.35;
+  --lh-body: 1.7;
+
+  /* 间距（4px 基准） */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* 圆角 */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-full: 999px;
+
+  /* 阴影 */
+  --shadow-1: 0 1px 2px rgba(29, 43, 39, 0.05), 0 1px 6px rgba(29, 43, 39, 0.04);
+  --shadow-2: 0 2px 8px rgba(29, 43, 39, 0.08), 0 10px 28px rgba(29, 43, 39, 0.07);
+
+  /* 布局 */
+  --page-max: 1120px;
+  --narrow-max: 860px;
+
+  /* 过渡 */
+  --t-fast: 120ms ease;
+}
