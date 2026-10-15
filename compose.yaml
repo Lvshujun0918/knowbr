@@ -18,6 +18,8 @@ services:
       ZXQ_LLM_MODEL: ${ZXQ_LLM_MODEL:-gpt-4o-mini}
       ZXQ_LLM_TIMEOUT_SECONDS: ${ZXQ_LLM_TIMEOUT_SECONDS:-20}
       ZXQ_LLM_DISABLED: ${ZXQ_LLM_DISABLED:-false}
+      ZXQ_LLM_USER_AGENT: ${ZXQ_LLM_USER_AGENT:-zhixingqiao-knowbr/1.0}
+      ZXQ_LLM_EXTRA_HEADERS: ${ZXQ_LLM_EXTRA_HEADERS:-}
     volumes:
       - knowbr-data:/app/data
     restart: unless-stopped
