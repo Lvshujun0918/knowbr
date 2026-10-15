@@ -32,7 +32,7 @@ var classificationFamily = ScenarioFamily{
 					Title:    "结合数据分布说明准确率的局限（0—2 分）",
 					MaxScore: 2,
 					KeywordGroups: []KeywordGroup{
-						{"比例", "占比", "不平衡", "少数", "多数", "样本量", "分布", "rare"},
+						{"比例", "占比", "只占", "正样本", "负样本", "不平衡", "少数", "多数", "样本量", "分布", "rare"},
 						{"准确率", "accuracy", "不可靠", "失真", "误导", "偏高", "不能反映"},
 					},
 					FullHitHint: "同时点出了样本比例失衡与准确率失效的原因，抓住了判断的起点。",
@@ -142,7 +142,7 @@ var classificationFamily = ScenarioFamily{
 					Title:    "识别不平衡与准确率的误导性（0—2 分）",
 					MaxScore: 2,
 					KeywordGroups: []KeywordGroup{
-						{"比例", "占比", "不平衡", "少数", "多数", "分布", "样本数"},
+						{"比例", "占比", "只占", "正样本", "负样本", "不平衡", "少数", "多数", "分布", "样本数"},
 						{"准确率", "accuracy", "误导", "偏高", "不能判断", "无法反映"},
 					},
 					FullHitHint: "同时指出了样本比例问题与准确率的局限。",

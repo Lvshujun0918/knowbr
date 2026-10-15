@@ -98,7 +98,7 @@ var architectureFamily = ScenarioFamily{
 					Title:    "根据训练与测试表现区分两种情形（0—2 分）",
 					MaxScore: 2,
 					KeywordGroups: []KeywordGroup{
-						{"欠拟合", "拟合不足", "训练和测试都低", "训练与测试都低"},
+						{"欠拟合", "拟合不足", "训练和测试都低", "训练与测试都低", "二者都低", "两者都低"},
 						{"过拟合", "泛化差距", "训练高测试低"},
 					},
 					FullHitHint: "区分了拟合不足的可能性与过拟合迹象，判断不再依赖单一测试结果。",
@@ -166,7 +166,7 @@ var architectureFamily = ScenarioFamily{
 					Title:    "区分参数存储与实际推理代价（0—2 分）",
 					MaxScore: 2,
 					KeywordGroups: []KeywordGroup{
-						{"运算量", "计算量", "多位置计算", "特征图"},
+						{"运算量", "计算量", "多位置计算", "多个位置", "参与计算", "特征图"},
 						{"同设备", "相同设备", "同批量", "相同批量", "实测延迟"},
 					},
 					FullHitHint: "认识到参数复用仍需计算，并提出可比条件下的时间测量。",
