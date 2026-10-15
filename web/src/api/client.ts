@@ -1,4 +1,6 @@
 import type {
+  AgentDecisionResponse,
+  AgentStepResponse,
   ApiErrorBody,
   DeleteResponse,
   DemoCasesResponse,
@@ -104,6 +106,16 @@ export const api = {
     request<RevisionResponse>(`/api/sessions/${encodeURIComponent(id)}/revisions`, {
       method: 'POST',
       body: JSON.stringify({ content }),
+    }),
+
+  // 智能体：先看决策（无副作用），再执行一跳（可能自动给出提示或标记教师介入）。
+  getAgent: (id: string) =>
+    request<AgentDecisionResponse>(`/api/sessions/${encodeURIComponent(id)}/agent`),
+
+  agentStep: (id: string) =>
+    request<AgentStepResponse>(`/api/sessions/${encodeURIComponent(id)}/agent/step`, {
+      method: 'POST',
+      body: '{}',
     }),
 
   transferQuestion: (id: string) =>

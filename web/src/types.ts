@@ -520,12 +520,75 @@ export interface SessionListResponse {
   storage: SessionListStorage
 }
 
+/* ---------------- 智能体决策 ---------------- */
+
+export interface AgentToolCall {
+  name: string
+  purpose: string
+  result: string
+}
+
+export interface AgentPlanItem {
+  step: string
+  title: string
+  status: string
+  note?: string
+}
+
+export interface AgentRepeatedIssue {
+  code: string
+  label: string
+  count: number
+  advice: string
+}
+
+export interface AgentMemory {
+  lookedAt: number
+  repeated: AgentRepeatedIssue[] | null
+  mastered: string[] | null
+  milestones: string[] | null
+  note: string
+}
+
+export interface AgentStep {
+  action: string
+  actionLabel: string
+  title: string
+  reason: string
+  requires: string[] | null
+  suggestHintLevel: number
+  blocked: boolean
+  blockedReason?: string
+  canAct: boolean
+  plan: AgentPlanItem[] | null
+  tools: AgentToolCall[] | null
+  memory?: AgentMemory | null
+  decidedAt: string
+  policyNote: string
+}
+
 export interface HintResponse {
   ok: boolean
   hint: Hint
   hints: Hint[]
   hintState: HintState
   alreadyProvided: boolean
+}
+
+export interface AgentDecisionResponse {
+  ok: true
+  agent: AgentStep
+}
+
+export interface AgentStepResponse {
+  ok: true
+  agent: AgentStep
+  executed: boolean
+  executedNote: string
+  hint?: Hint
+  hints: Hint[]
+  hintState: HintState
+  session: Session
 }
 
 export interface RevisionResponse {

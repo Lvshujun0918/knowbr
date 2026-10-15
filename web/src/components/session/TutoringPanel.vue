@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api/client'
-import type { Hint, HintState, Revision, Session, TransferState } from '../../types'
+import type { AgentStep, Hint, HintState, Revision, Session, TransferState } from '../../types'
 import { errorMessage, formatDateTime, hintLevelLabel, progressLabel, progressTagKind } from '../../lib/utils'
 import AlertBox from '../AlertBox.vue'
 
@@ -76,6 +76,45 @@ async function enterTransfer(): Promise<void> {
 }
 
 const busy = computed(() => hintPending.value !== 0 || revisionPending.value || transferPending.value)
+
+/* ---------------- 智能体决策 ---------------- */
+
+const agent = ref<AgentStep | null>(null)
+const agentPending = ref(false)
+const agentNote = ref('')
+const agentError = ref('')
+
+async function loadAgent(): Promise<void> {
+  agentError.value = ''
+  try {
+    const res = await api.getAgent(props.session.id)
+    agent.value = res.agent
+  } catch (err) {
+    agentError.value = errorMessage(err)
+  }
+}
+
+async function runAgentStep(): Promise<void> {
+  agentError.value = ''
+  agentNote.value = ''
+  agentPending.value = true
+  try {
+    const res = await api.agentStep(props.session.id)
+    agent.value = res.agent
+    agentNote.value = res.executedNote
+    emit('update', { hints: res.hints ?? props.session.hints, hintState: res.hintState, revisions: props.session.revisions })
+  } catch (err) {
+    agentError.value = errorMessage(err)
+  } finally {
+    agentPending.value = false
+  }
+}
+
+onMounted(() => {
+  void loadAgent()
+})
+
+const planStatusLabel: Record<string, string> = { done: '已完成', current: '进行中', pending: '待进行' }
 </script>
 
 <template>
@@ -155,6 +194,88 @@ const busy = computed(() => hintPending.value !== 0 || revisionPending.value || 
       </div>
 
       <aside class="panel-side">
+        <div class="card agent-card">
+          <h2 class="card__title">智能体决策</h2>
+          <template v-if="agent">
+            <div class="tag-row">
+              <span class="tag tag--agent">{{ agent.actionLabel }}</span>
+              <span v-if="agent.blocked" class="tag tag--warning">已阻止直接给示例</span>
+            </div>
+            <p class="agent-card__title">{{ agent.title }}</p>
+            <p class="side-note">决策依据：{{ agent.reason }}</p>
+
+            <div v-if="agent.requires && agent.requires.length > 0" class="agent-card__requires">
+              <h3 class="card__subtitle">需要你补充的材料</h3>
+              <ul class="list list--tight">
+                <li v-for="(r, i) in agent.requires" :key="'req' + i">{{ r }}</li>
+              </ul>
+              <p v-if="agent.blockedReason" class="side-note">{{ agent.blockedReason }}</p>
+            </div>
+
+            <button
+              type="button"
+              class="btn btn--primary btn--block"
+              :disabled="agentPending || !agent.canAct"
+              @click="runAgentStep"
+            >
+              {{ agentPending ? '智能体正在执行…' : '让智能体决定下一步' }}
+            </button>
+            <p v-if="!agent.canAct" class="side-note">当前状态下没有需要系统自动执行的动作，按下面的建议继续即可。</p>
+            <p v-if="agentNote" class="side-note" aria-live="polite">{{ agentNote }}</p>
+
+            <div v-if="agent.plan && agent.plan.length > 0" class="agent-card__plan">
+              <h3 class="card__subtitle">分步计划</h3>
+              <ol class="agent-plan">
+                <li v-for="item in agent.plan" :key="item.step" class="agent-plan__item" :class="`agent-plan__item--${item.status}`">
+                  <span class="agent-plan__status">{{ planStatusLabel[item.status] ?? item.status }}</span>
+                  <span class="agent-plan__title">{{ item.title }}</span>
+                  <span v-if="item.note" class="agent-plan__note">备注：{{ item.note }}</span>
+                </li>
+              </ol>
+            </div>
+
+            <details v-if="agent.tools && agent.tools.length > 0" class="agent-card__tools">
+              <summary>智能体运行了哪些检查？</summary>
+              <ul class="list list--tight">
+                <li v-for="(tool, i) in agent.tools" :key="'tool' + i">
+                  <strong>{{ tool.purpose }}</strong>
+                  <div class="side-note">{{ tool.result }}</div>
+                </li>
+              </ul>
+            </details>
+
+            <details v-if="agent.memory && agent.memory.lookedAt > 0" class="agent-card__memory">
+              <summary>长期记忆（本机历史记录 {{ agent.memory.lookedAt }} 条）</summary>
+              <div v-if="agent.memory.repeated && agent.memory.repeated.length > 0">
+                <h3 class="card__subtitle">重复出现的误区</h3>
+                <ul class="list list--tight">
+                  <li v-for="r in agent.memory.repeated" :key="r.code">
+                    <strong>{{ r.label }}</strong>（{{ r.count }} 次）
+                    <div class="side-note">{{ r.advice }}</div>
+                  </li>
+                </ul>
+              </div>
+              <div v-if="agent.memory.mastered && agent.memory.mastered.length > 0">
+                <h3 class="card__subtitle">已体现掌握的知识点</h3>
+                <div class="tag-row">
+                  <span v-for="m in agent.memory.mastered" :key="m" class="tag tag--success">{{ m }}</span>
+                </div>
+              </div>
+              <div v-if="agent.memory.milestones && agent.memory.milestones.length > 0">
+                <h3 class="card__subtitle">进展标记</h3>
+                <ul class="list list--tight">
+                  <li v-for="(m, i) in agent.memory.milestones" :key="'ms' + i">{{ m }}</li>
+                </ul>
+              </div>
+              <p class="side-note">{{ agent.memory.note }}</p>
+            </details>
+
+            <p class="side-note agent-card__policy">{{ agent.policyNote }}</p>
+          </template>
+          <p v-else-if="agentError" class="form-error" role="alert">{{ agentError }}</p>
+          <p v-else class="side-note">正在读取智能体的下一步计划…</p>
+        </div>
+
         <div class="card">
           <h2 class="card__title">获取提示</h2>
           <p class="side-note">提示逐级加深：先观察方向，再概念解释，最后局部示例。每级提示都会说明针对哪个知识点，并避开你已经掌握的内容。</p>

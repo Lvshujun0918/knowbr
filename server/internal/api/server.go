@@ -70,6 +70,8 @@ func (s *Server) Router() *gin.Engine {
 		apiGroup.GET("/sessions/:id", s.GetSession)
 		apiGroup.DELETE("/sessions/:id", s.DeleteSession)
 		apiGroup.POST("/sessions/:id/hints", s.AddHint)
+		apiGroup.GET("/sessions/:id/agent", s.GetAgentDecision)
+		apiGroup.POST("/sessions/:id/agent/step", s.AgentStepEndpoint)
 		apiGroup.POST("/sessions/:id/revisions", s.AddRevision)
 		apiGroup.POST("/sessions/:id/transfer/question", s.TransferQuestion)
 		apiGroup.POST("/sessions/:id/transfer/answer", s.TransferAnswer)
