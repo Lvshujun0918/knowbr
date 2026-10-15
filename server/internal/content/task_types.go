@@ -8,6 +8,7 @@ const (
 	TaskArchitecture   = "model_architecture"     // 模型结构与容量
 	TaskClassification = "classification_metrics" // 分类指标与类别不平衡
 	TaskRegression     = "regression_metrics"     // 回归任务与误差指标
+	TaskClustering     = "clustering_metrics"     // 聚类任务与簇质量评估
 	TaskGeneric        = "generic"                // 未识别到明确任务类型
 )
 
@@ -140,6 +141,32 @@ var TaskTypes = []TaskType{
 			"用留出验证集或交叉验证的结果判断是否过拟合",
 		},
 		CompletenessNote: "回归任务的核心证据是误差指标与目标变量的量纲，不使用混淆矩阵或逐类指标。",
+	},
+	{
+		Code:  TaskClustering,
+		Label: "聚类任务与簇质量评估",
+		FocusKnowledge: []string{
+			"簇数与业务含义的匹配",
+			"内部指标（轮廓系数、惯性）的含义与局限",
+			"特征标准化对距离度量的影响",
+			"聚类结果的可复现与稳定性",
+		},
+		Evidence: []EvidenceSpec{
+			{Name: "学生自己的实验解释", Required: true, Impact: "没有学生自己的判断就无法诊断其理解情况。"},
+			{Name: "簇数与各簇的样本分布", Required: true, Impact: "不知道各簇规模时，无法判断分群是否退化成“一个巨簇加若干孤点”。"},
+			{Name: "轮廓系数或惯性等内部指标", Required: true, Impact: "没有内部指标时无法讨论聚类质量，也无法比较不同簇数。"},
+			{Name: "特征与标准化做法", Required: false, Optional: "有特征处理说明时才能讨论距离度量是否被量纲主导。"},
+			{Name: "业务解释或稳定性对照", Required: false, Optional: "有业务解释或重复实验时才能说明分群是否有实际意义。"},
+		},
+		OffTopic: []string{
+			"混淆矩阵与逐类召回率/精确率/F1", "类别不平衡下的指标轮换",
+			"回归误差的量纲与基线对照", "梯度裁剪与训练稳定性",
+		},
+		NextLearning: []string{
+			"对多个簇数分别比较内部指标与业务解释",
+			"说明特征标准化对距离度量的影响",
+		},
+		CompletenessNote: "聚类是无监督任务，不使用混淆矩阵、逐类召回率或回归误差指标。",
 	},
 	{
 		Code:  TaskGeneric,

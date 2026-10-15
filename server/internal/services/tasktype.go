@@ -30,6 +30,10 @@ var taskSignals = map[string][]string{
 		"回归", "预测值", "房价", "成交量", "气温", "用电量", "mae", "mse", "rmse", "r2", "r²",
 		"决定系数", "均方误差", "平均绝对误差", "残差", "拟合优度", "目标变量", "连续值",
 	},
+	content.TaskClustering: {
+		"聚类", "kmeans", "k-means", "k均值", "轮廓系数", "silhouette", "惯性", "inertia",
+		"肘部", "无监督", "dbscan", "层次聚类", "分群", "簇",
+	},
 }
 
 // DetectTaskType 判定当前实验属于哪一类任务（需求文档 3.1「当前实验」上下文）。

@@ -174,6 +174,30 @@ var regressionEvidenceGroups = []evidenceGroup{
 	},
 }
 
+// clusteringEvidenceGroups 适用于聚类与簇质量评估任务。
+var clusteringEvidenceGroups = []evidenceGroup{
+	{
+		Name:          "簇数与业务含义的对应",
+		Words:         []string{"业务", "含义", "画像", "对应", "代表", "策略", "用户特征", "场景"},
+		MissingAdvice: "还没有说明每个簇在业务上代表什么",
+	},
+	{
+		Name:          "内部指标的含义与局限",
+		Words:         []string{"轮廓系数", "silhouette", "惯性", "inertia", "内部指标", "几何", "紧凑", "分离", "局限"},
+		MissingAdvice: "还没有说明轮廓系数或惯性只能描述几何结构、不携带业务含义",
+	},
+	{
+		Name:          "特征标准化与距离度量",
+		Words:         []string{"标准化", "归一化", "z-score", "scale", "量纲", "距离", "度量"},
+		MissingAdvice: "还没有说明特征量纲会主导距离度量、聚类前需要标准化",
+	},
+	{
+		Name:          "簇数选择与结果的可复现性",
+		Words:         []string{"簇数", "几类", "多个", "对比", "随机种子", "初始化", "重复", "稳定", "可复现"},
+		MissingAdvice: "还没有比较过不同簇数，也没有固定随机种子验证结果是否稳定",
+	},
+}
+
 // genericEvidenceGroups 用于任务类型不明确的情况：只考查结论与证据的对应关系。
 var genericEvidenceGroups = []evidenceGroup{
 	{
@@ -199,6 +223,8 @@ func EvidenceGroupsFor(taskType string) []evidenceGroup {
 		return envEvidenceGroups
 	case content.TaskRegression:
 		return regressionEvidenceGroups
+	case content.TaskClustering:
+		return clusteringEvidenceGroups
 	case content.TaskGeneric:
 		return genericEvidenceGroups
 	default:

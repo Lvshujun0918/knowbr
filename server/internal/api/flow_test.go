@@ -354,6 +354,7 @@ func TestAllDemoCasesProduceUsableDiagnosis(t *testing.T) {
 		"case-mlp-cnn":         "E8",
 		"case-rnn-instability": "E6",
 		"case-regression":      "E11",
+		"case-clustering":      "E14",
 	}
 	for _, c := range content.DemoCases {
 		t.Run(c.ID, func(t *testing.T) {

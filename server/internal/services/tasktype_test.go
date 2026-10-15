@@ -17,6 +17,7 @@ func TestDetectTaskTypeForDemoCases(t *testing.T) {
 		"case-mlp-cnn":         content.TaskArchitecture,
 		"case-rnn-instability": content.TaskTraining,
 		"case-regression":      content.TaskRegression,
+		"case-clustering":      content.TaskClustering,
 	}
 	for _, c := range content.DemoCases {
 		t.Run(c.ID, func(t *testing.T) {

@@ -228,6 +228,34 @@ R2: 0.93
 			Question:                  "R² 这么高、误差看着也小，为什么我还是不确定它上线后准不准？",
 		},
 	},
+	{
+		ID:          "case-clustering",
+		Name:        "案例九：K-means 分群只看轮廓系数（模拟数据）",
+		Description: "客户分群任务中，学生报告 K=5、轮廓系数 0.62，认为“聚类效果很好、可以直接用于营销”，但特征未标准化、未固定随机种子，也没有说明每个簇的业务含义。用于演示聚类任务中内部指标的局限、簇数选择与稳定性检查。",
+		DataNotice:  DemoDataNotice,
+		ExpectedFocus: []string{
+			"轮廓系数只描述几何结构，不携带业务含义",
+			"簇数要在多个取值间比较，不能只看一个数值",
+			"量纲会主导距离，聚类前需要标准化并验证稳定性",
+		},
+		Submission: DemoSubmission{
+			ExperimentTitle:    "客户分群聚类实验",
+			ExperimentGoal:     "对会员按消费行为分群，用于差异化运营策略。",
+			DatasetDescription: "某电商会员行为数据 8000 条，特征包括年消费金额（元，几百到几万）与月访问次数（0—60 次），两者量纲差异很大。",
+			ModelName:          "K-means（K=5，未做标准化，未设置随机种子与多次初始化）",
+			CodeSnippet: `from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+model = KMeans(n_clusters=5)        # 未标准化，未固定 random_state，默认 n_init
+labels = model.fit_predict(X)       # X 同时包含金额（元）与访问次数（次）
+print("silhouette:", silhouette_score(X, labels))`,
+			ExecutionLog: `silhouette: 0.62
+（以上为人工构造的模拟教学数据，不是真实训练结果）`,
+			MetricsText:               "K=5，轮廓系数 0.62；未做特征标准化，未重复运行比较稳定性，未统计各簇规模。",
+			StudentInitialExplanation: "我用 K-means 把会员分成 5 群，轮廓系数达到 0.62，说明聚类效果很好，可以直接用来制定营销策略了。",
+			Question:                  "轮廓系数这个数值，能不能说明分出来的群有业务意义？",
+		},
+	},
 }
 
 // DemoCaseByID 按编号查找演示案例。

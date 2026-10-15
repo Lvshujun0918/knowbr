@@ -442,6 +442,62 @@ var claimRules = []claimRule{
 		EvidenceBoundary: "还需要说明该误差是否满足任务的可接受标准。",
 		NextQuestion:     "请写出本任务可接受的误差上限，并说明它来自哪一条业务要求。",
 	},
+	{
+		Code:           "CLU-SUPERVISED",
+		TaskTypes:      []string{content.TaskClustering},
+		KnowledgePoint: "无监督任务的评价方式",
+		Groups: []content.KeywordGroup{
+			{"准确率", "accuracy", "精确率", "召回率", "f1", "混淆矩阵"},
+			{"聚类", "分群", "无监督", "簇"},
+		},
+		Status:           ClaimError,
+		Judgment:         "用需要真实标签的指标评价没有标签的聚类结果。",
+		Reason:           "准确率、召回率与混淆矩阵都要与真实标签比较才能计算；聚类没有标签，只能看簇内与簇间的结构，或借助外部业务判断。",
+		EvidenceBoundary: "现有材料能说明分群结果，但无法支撑任何有监督指标。",
+		NextQuestion:     "请改用轮廓系数、惯性等只依赖数据的指标，并说明每个簇在业务上代表什么。",
+	},
+	{
+		Code:           "CLU-METRIC-ONLY",
+		TaskTypes:      []string{content.TaskClustering},
+		KnowledgePoint: "内部指标的含义与局限",
+		Groups: []content.KeywordGroup{
+			{"轮廓系数", "silhouette", "惯性", "inertia", "sse"},
+			{"很好", "不错", "可以直接用", "直接用", "够用", "可接受", "没问题"},
+		},
+		Status:           ClaimError,
+		Judgment:         "只用一个内部指标的数值就断定分群可用。",
+		Reason:           "轮廓系数与惯性只描述几何结构，不携带业务含义；惯性还会随簇数增加而单调下降，不能单独用来选择簇数或判定可用性。",
+		EvidenceBoundary: "该数值只在特定簇数、特定特征处理下成立，尚未与业务含义和稳定性对照。",
+		NextQuestion:     "请写出你尝试过的簇数与各自的内部指标，并说明最终选定的簇数对应哪些业务上的用户特征。",
+	},
+	{
+		Code:           "CLU-MEANING",
+		TaskTypes:      []string{content.TaskClustering},
+		KnowledgePoint: "簇数与业务含义的匹配",
+		Groups: []content.KeywordGroup{
+			{"簇", "分群", "主题", "类用户"},
+			{"业务", "含义", "解释", "画像", "对应", "代表", "营销", "场景"},
+		},
+		Status:           ClaimMastered,
+		Judgment:         "把簇与业务含义对应起来了。",
+		Reason:           "聚类结果只有能被业务解释才能使用，这一步说明已经越过了“只看指标数字”。",
+		EvidenceBoundary: "还需要说明该分群在多簇数与不同初始化下是否稳定。",
+		NextQuestion:     "请给出各簇的规模与关键特征，并说明哪个簇对应哪种运营策略。",
+	},
+	{
+		Code:           "CLU-STANDARDIZE",
+		TaskTypes:      []string{content.TaskClustering},
+		KnowledgePoint: "特征标准化对距离度量的影响",
+		Groups: []content.KeywordGroup{
+			{"标准化", "归一化", "z-score", "scale", "量纲"},
+			{"距离", "度量", "聚类", "kmeans", "k-means", "权重"},
+		},
+		Status:           ClaimMastered,
+		Judgment:         "注意到特征量纲会主导距离度量。",
+		Reason:           "K-means 等基于距离的算法会被量纲大的特征主导，因此聚类前需要先标准化，否则分群实际反映的是单个特征的范围。",
+		EvidenceBoundary: "还需要说明标准化后的分群是否稳定、是否仍有业务解释。",
+		NextQuestion:     "请说明你用了哪种标准化方式，并比较标准化前后的分群结果。",
+	},
 }
 
 var claimSentenceSplitter = regexp.MustCompile(`[。！？；\n!?;]+`)
@@ -657,6 +713,15 @@ func evidencePresent(name string, in DiagnoseInput) bool {
 	switch {
 	case strings.Contains(name, "解释"):
 		return strings.TrimSpace(in.Explanation) != ""
+	case strings.Contains(name, "簇数") || strings.Contains(name, "簇规模"):
+		return containsAny(strings.ToLower(in.MetricsText+in.ExecutionLog+in.DatasetDescription), []string{"簇", "群", "k=", "k =", "cluster"})
+	case strings.Contains(name, "轮廓系数") || strings.Contains(name, "内部指标"):
+		return containsAny(strings.ToLower(in.MetricsText+in.ExecutionLog), []string{"轮廓", "silhouette", "惯性", "inertia", "sse", "肘部"})
+	case strings.Contains(name, "特征与标准化"):
+		return containsAny(strings.ToLower(in.DatasetDescription+in.CodeSnippet+in.MetricsText), []string{"标准化", "归一化", "z-score", "scale", "量纲", "特征"})
+	case strings.Contains(name, "业务解释") || strings.Contains(name, "稳定性"):
+		return containsAny(strings.ToLower(in.Explanation+in.MetricsText+in.ExecutionLog+in.DatasetDescription),
+			[]string{"业务", "含义", "画像", "对应", "代表", "随机种子", "重复", "稳定"})
 	case strings.Contains(name, "任务目标") || strings.Contains(name, "实验目标"):
 		return strings.TrimSpace(in.ExperimentGoal) != "" || strings.TrimSpace(in.DatasetDescription) != ""
 	case strings.Contains(name, "训练日志"):
