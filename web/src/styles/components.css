@@ -1697,3 +1697,77 @@
   font-size: var(--fs-caption);
   color: var(--c-ink-3);
 }
+
+/* ---------- 覆盖范围 ---------- */
+
+.hero__coverage-card {
+  border-color: var(--c-primary);
+}
+
+.hero__coverage-count {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--c-ink-2);
+}
+
+.coverage-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: var(--sp-3) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coverage-list__item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-1);
+  border-bottom: 1px dashed var(--c-line);
+  font-size: var(--fs-small);
+}
+
+.coverage-list__item:last-child {
+  border-bottom: none;
+}
+
+.coverage-list__label {
+  color: var(--c-ink);
+}
+
+.coverage-list__meta {
+  flex-shrink: 0;
+  font-size: var(--fs-caption);
+  color: var(--c-ink-3);
+}
+
+/* ---------- 窄屏补充（放在最后，覆盖前面的默认值） ---------- */
+
+@media (max-width: 760px) {
+  /* 产品名较长，窄屏收敛一级，避免占满四行 */
+  .hero__title {
+    font-size: var(--fs-h1);
+  }
+
+  /* 混淆矩阵在手机上不再横向溢出：缩小单元格与行首宽度 */
+  .input--cell {
+    width: 54px;
+  }
+
+  .input--label {
+    min-width: 66px;
+  }
+
+  .matrix-editor__hint {
+    flex-basis: 100%;
+  }
+
+  .table-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.coverage-tags {
+  margin: var(--sp-3) 0;
+}

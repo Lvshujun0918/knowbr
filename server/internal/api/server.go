@@ -143,6 +143,15 @@ func (s *Server) Meta(c *gin.Context) {
 			"direct":           a.DirectTroubleshooting,
 		})
 	}
+	// 覆盖范围：把所有已实现的教学场景列出来，便于使用者（含评委/教师）当场核对能力边界。
+	covered := make([]gin.H, 0, len(content.TaskTypes))
+	for _, t := range content.TaskTypes {
+		if t.Code == content.TaskGeneric {
+			continue
+		}
+		families := len(content.FamiliesByTaskType(t.Code))
+		covered = append(covered, gin.H{"code": t.Code, "label": t.Label, "families": families})
+	}
 	categories := make([]gin.H, 0, len(content.Categories))
 	for _, cc := range content.Categories {
 		categories = append(categories, gin.H{"code": cc.Code, "label": cc.Label})
@@ -154,7 +163,7 @@ func (s *Server) Meta(c *gin.Context) {
 		"productName": "知行桥——人工智能基础课程教学衔接智能体",
 		"tagline":     "以实验结果为证据，通过诊断、分层提示和迁移检验，帮助学生真正理解人工智能实验。",
 		"course":      "《人工智能基础（A）》",
-		"focus":       "首期聚焦“机器学习分类实验”，其他课程模块属于后续扩展范围。",
+		"focus":       "覆盖《人工智能基础（A）》机器学习实验的核心任务：分类指标、模型结构、训练稳定性、环境排障、回归、聚类与数据预处理；其他课程模块属于后续扩展范围。",
 		"mode":        gin.H{"code": mode, "label": label, "notice": notice, "llmConfigured": s.llm.Available(), "llmModel": s.llmModel},
 		"steps": []gin.H{
 			{"key": "submit", "title": "提交材料"},
@@ -165,6 +174,13 @@ func (s *Server) Meta(c *gin.Context) {
 		},
 		"categories": categories,
 		"archetypes": archetypes,
+		"coverage": gin.H{
+			"taskTypes": covered,
+			"taskTypeCount": len(covered),
+			"ruleCount":     len(content.Archetypes),
+			"caseCount":     len(content.DemoCases),
+			"note": "覆盖范围仅指内置规则库已实现的教学场景：诊断、三级提示、迁移题与修正反馈都限定在对应任务类型的知识范围内；未覆盖的课程模块不会被声称为已支持。",
+		},
 		"honesty": []string{
 			"系统区分真实计算结果、学生输入与模拟演示数据，所有指标均由程序计算。",
 			"系统不会声称运行过学生代码，也不会假设学生未提供的实验结果。",

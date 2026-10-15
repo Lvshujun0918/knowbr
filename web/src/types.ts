@@ -45,6 +45,20 @@ export interface StorageInfo {
   note: string
 }
 
+export interface CoverageTaskType {
+  code: string
+  label: string
+  families: number
+}
+
+export interface CoverageInfo {
+  taskTypes: CoverageTaskType[]
+  taskTypeCount: number
+  ruleCount: number
+  caseCount: number
+  note: string
+}
+
 export interface Meta {
   productName: string
   tagline: string
@@ -56,6 +70,7 @@ export interface Meta {
   archetypes: ArchetypeDef[]
   honesty: string[]
   storage: StorageInfo
+  coverage?: CoverageInfo
 }
 
 export interface MetaResponse extends Meta {

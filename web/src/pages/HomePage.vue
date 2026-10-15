@@ -67,6 +67,16 @@ async function tryDemo(): Promise<void> {
           <h2 class="card__title">本期聚焦</h2>
           <p class="hero__focus">{{ meta.focus }}</p>
         </div>
+        <div v-if="meta?.coverage" class="card hero__coverage-card">
+          <h2 class="card__title">已覆盖的教学场景</h2>
+          <p class="hero__coverage-count">
+            {{ meta.coverage.taskTypeCount }} 个任务类型 · {{ meta.coverage.ruleCount }} 条典型误区规则 · {{ meta.coverage.caseCount }} 个演示案例
+          </p>
+          <div class="tag-row coverage-tags">
+            <span v-for="t in meta.coverage.taskTypes" :key="t.code" class="tag tag--category">{{ t.label }}</span>
+          </div>
+          <p class="side-note">{{ meta.coverage.note }}</p>
+        </div>
       </aside>
     </section>
 
