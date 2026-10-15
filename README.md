@@ -7,6 +7,20 @@
 > 已覆盖《人工智能基础（A）》机器学习实验的核心任务：分类指标、模型结构、训练稳定性、环境排障、回归、聚类与数据预处理；其他课程模块属于后续扩展范围（当前 7 个任务类型 / 16 条典型误区规则 / 10 个演示案例，首页与 `GET /api/meta` 会实时展示同一份覆盖范围）。
 > 内置演示案例中的数据均为**人工构造的教学演示数据**，不是真实训练实验结果，也不代表任何真实学生的学习成效。
 
+## 界面预览
+
+以下截图均取自本项目**实际运行界面**（规则模式 + 预置模拟案例数据），未做设计稿替换。
+
+| 首页：产品定位与已覆盖教学场景 | 提交实验材料：10 个字段 + 混淆矩阵实时校验 |
+|---|---|
+| ![首页](docs/screenshots/01-home.png) | ![提交实验材料](docs/screenshots/02-submit.png) |
+| **诊断结果**：问题类型、引用的证据、逐条主张与掌握情况 | **分层辅导**：三级提示 + 智能体决策、工具轨迹与跨会话记忆 |
+| ![诊断结果](docs/screenshots/03-diagnosis.png) | ![分层辅导](docs/screenshots/04-tutoring.png) |
+| **迁移测试**：作答前即可见评分维度，作答后才给参考答案 | **学习反馈**：结构化摘要与一键导出 Markdown / TXT |
+| ![迁移测试](docs/screenshots/05-transfer.png) | ![学习反馈](docs/screenshots/06-report.png) |
+| **教师视图**：共性问题与记录摘要（仅本机记录，不作班级统计） | **窄屏适配**：手机宽度下的首页与全流程 |
+| ![教师视图](docs/screenshots/07-teacher.png) | ![手机端首页](docs/screenshots/08-mobile.png) |
+
 ## 1. 环境要求
 
 | 组件 | 版本 | 说明 |
@@ -186,7 +200,9 @@ knowbr/
 ├── .env.example               # 环境变量示例（不含真实密钥）
 ├── docs/
 │   ├── API_CONTRACT.md        # 前后端接口契约（冻结版）
-│   └── DEMO_SCRIPT.md         # 5—7 分钟演示脚本
+│   ├── DEMO_SCRIPT.md         # 5—7 分钟演示脚本
+│   └── screenshots/           # README 使用的实际运行界面截图
+├── Makefile                   # make check：一键质量门（vet + test + build + 前端构建）
 ├── server/                    # Go + Gin + GORM
 │   ├── main.go
 │   └── internal/
