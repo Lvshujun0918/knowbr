@@ -18,12 +18,23 @@ import (
 
 // LLMConfig 是大模型接入配置。未配置 API Key 时应用自动使用规则模式。
 type LLMConfig struct {
-	Enabled bool
-	BaseURL string
-	APIKey  string
-	Model   string
-	Timeout time.Duration
+	Enabled  bool
+	BaseURL  string
+	APIKey   string
+	Model    string
+	Timeout  time.Duration
+	// ExtraHeaders 是随每次请求发送的额外请求头。值中的 {{session}} 会被替换为本轮学习会话编号，
+	// 用于像 OpenCode Go 这样要求客户端上报稳定会话标识的服务。
+	ExtraHeaders map[string]string
+	// UserAgent 标识调用方身份；默认值不是通用 SDK，便于服务端区分流量。
+	UserAgent string
 }
+
+// defaultUserAgent 是本应用对外声明的客户端标识。
+const defaultUserAgent = "zhixingqiao-knowbr/1.0"
+
+// sessionPlaceholder 是额外请求头中代表学习会话编号的占位符。
+const sessionPlaceholder = "{{session}}"
 
 // LoadLLMConfig 从环境变量读取配置，密钥只保存在服务端。
 func LoadLLMConfig() LLMConfig {
@@ -37,7 +48,40 @@ func LoadLLMConfig() LLMConfig {
 	apiKey := firstNonEmpty(os.Getenv("ZXQ_LLM_API_KEY"), os.Getenv("OPENAI_API_KEY"))
 	model := firstNonEmpty(os.Getenv("ZXQ_LLM_MODEL"), "gpt-4o-mini")
 	enabled := apiKey != "" && strings.ToLower(strings.TrimSpace(os.Getenv("ZXQ_LLM_DISABLED"))) != "true"
-	return LLMConfig{Enabled: enabled, BaseURL: baseURL, APIKey: apiKey, Model: model, Timeout: timeout}
+	return LLMConfig{
+		Enabled:      enabled,
+		BaseURL:      baseURL,
+		APIKey:       apiKey,
+		Model:        model,
+		Timeout:      timeout,
+		ExtraHeaders: parseExtraHeaders(os.Getenv("ZXQ_LLM_EXTRA_HEADERS")),
+		UserAgent:    firstNonEmpty(os.Getenv("ZXQ_LLM_USER_AGENT"), defaultUserAgent),
+	}
+}
+
+// parseExtraHeaders 解析形如 `x-opencode-session={{session}};X-Other=1` 的额外请求头配置。
+// 分隔符可用分号、逗号或换行；条目缺少名称或取值时直接跳过，不阻断启动。
+func parseExtraHeaders(raw string) map[string]string {
+	out := map[string]string{}
+	for _, part := range strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ';' || r == ',' || r == '\n'
+	}) {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		i := strings.Index(part, "=")
+		if i <= 0 {
+			continue
+		}
+		name := strings.TrimSpace(part[:i])
+		value := strings.TrimSpace(part[i+1:])
+		if name == "" || value == "" {
+			continue
+		}
+		out[name] = value
+	}
+	return out
 }
 
 // LLMClient 是 OpenAI 兼容 Chat Completions 接口的最小客户端。
@@ -80,7 +124,8 @@ type chatResponse struct {
 }
 
 // Chat 调用 Chat Completions 接口，任何失败都会返回错误交由上层回退到规则模式。
-func (c *LLMClient) Chat(ctx context.Context, system, user string) (string, error) {
+// sessionID 是本轮学习会话的编号，用于填充额外请求头中的 {{session}} 占位符。
+func (c *LLMClient) Chat(ctx context.Context, system, user, sessionID string) (string, error) {
 	if !c.Available() {
 		return "", errors.New("未配置大模型 API Key，当前为规则模式")
 	}
@@ -103,6 +148,18 @@ func (c *LLMClient) Chat(ctx context.Context, system, user string) (string, erro
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.cfg.APIKey)
+	ua := c.cfg.UserAgent
+	if strings.TrimSpace(ua) == "" {
+		ua = defaultUserAgent
+	}
+	req.Header.Set("User-Agent", ua)
+	for name, value := range c.cfg.ExtraHeaders {
+		value = strings.ReplaceAll(value, sessionPlaceholder, sessionID)
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+		req.Header.Set(name, value)
+	}
 	resp, err := c.httpc.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("调用大模型接口失败：%w", err)
@@ -130,7 +187,8 @@ func (c *LLMClient) Chat(ctx context.Context, system, user string) (string, erro
 
 // EnhanceDiagnosis 使用大模型润色诊断的自然语言部分。
 // 约束：类别、证据、指标数值一律沿用规则引擎结果；若模型引入未提供的数据，则整段回退。
-func (c *LLMClient) EnhanceDiagnosis(ctx context.Context, diag Diagnosis, in DiagnoseInput) (Diagnosis, error) {
+// sessionID 用于填充额外请求头中的 {{session}}，便于服务端做路由与缓存。
+func (c *LLMClient) EnhanceDiagnosis(ctx context.Context, diag Diagnosis, in DiagnoseInput, sessionID string) (Diagnosis, error) {
 	if !c.Available() {
 		return diag, errors.New("未配置大模型 API Key")
 	}
@@ -152,7 +210,7 @@ func (c *LLMClient) EnhanceDiagnosis(ctx context.Context, diag Diagnosis, in Dia
 	facts.WriteString("规则引擎给出的下一步建议：" + diag.NextStep + "\n")
 	facts.WriteString(`请输出 JSON：{"mainIssue":"一句话主要问题","reasoning":"诊断理由","nextStep":"下一步建议"}`)
 
-	out, err := c.Chat(ctx, system, facts.String())
+	out, err := c.Chat(ctx, system, facts.String(), sessionID)
 	if err != nil {
 		return diag, err
 	}
@@ -182,14 +240,14 @@ func (c *LLMClient) EnhanceDiagnosis(ctx context.Context, diag Diagnosis, in Dia
 }
 
 // EnhanceSummary 使用大模型润色教师摘要（失败时保留规则版本）。
-func (c *LLMClient) EnhanceSummary(ctx context.Context, summary Summary) (string, error) {
+func (c *LLMClient) EnhanceSummary(ctx context.Context, summary Summary, sessionID string) (string, error) {
 	if !c.Available() {
 		return summary.TeacherSummary, errors.New("未配置大模型 API Key")
 	}
 	system := "你是课程助教，负责把结构化学习记录改写为面向教师的简要反馈。" +
 		"只能使用给定事实，禁止编造成绩、通过率或学生画像。输出纯文本，不要 Markdown 标题。"
 	user := "结构化记录：\n" + summary.TeacherSummary + "\n请改写为 4—6 句的教师反馈。"
-	out, err := c.Chat(ctx, system, user)
+	out, err := c.Chat(ctx, system, user, sessionID)
 	if err != nil {
 		return summary.TeacherSummary, err
 	}

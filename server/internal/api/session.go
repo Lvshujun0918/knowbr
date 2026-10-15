@@ -54,12 +54,15 @@ func (s *Server) newSession(sub models.Submission) (*models.Session, error) {
 	}
 
 	diag := services.Diagnose(input)
+	// 先生成学习会话编号：它既是数据库主键，也作为大模型请求的会话标识，
+	// 使同一轮学习内的调用能被服务端归并到同一会话（便于路由与缓存）。
+	sessionID := uuid.NewString()
 	mode := ModeRule
 	llmUsed := false
 	fallback := ""
 	useLLM := sub.UseLLM == nil || *sub.UseLLM
 	if useLLM && s.llm.Available() {
-		enhanced, err := s.llm.EnhanceDiagnosis(ctxOrBackground(), diag, input)
+		enhanced, err := s.llm.EnhanceDiagnosis(ctxOrBackground(), diag, input, sessionID)
 		if err != nil {
 			fallback = err.Error()
 		} else {
@@ -80,7 +83,7 @@ func (s *Server) newSession(sub models.Submission) (*models.Session, error) {
 
 	now := time.Now().UTC()
 	sess := &models.Session{
-		ID:                        uuid.NewString(),
+		ID:                        sessionID,
 		CreatedAt:                 now,
 		UpdatedAt:                 now,
 		Status:                    models.StatusDiagnosed,
@@ -559,7 +562,7 @@ func (s *Server) buildAndStoreSummary(sess *models.Session) (services.Summary, s
 		IsDemo:     sess.IsDemo,
 	})
 	if s.llm.Available() && sess.LLMUsed {
-		if text, err := s.llm.EnhanceSummary(ctxOrBackground(), summary); err == nil {
+		if text, err := s.llm.EnhanceSummary(ctxOrBackground(), summary, sess.ID); err == nil {
 			summary.TeacherSummary = text
 		}
 	}

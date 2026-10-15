@@ -68,7 +68,7 @@ func TestEnhanceDiagnosisUsesGroundedOutput(t *testing.T) {
 	})
 	defer srv.Close()
 
-	enhanced, err := client.EnhanceDiagnosis(context.Background(), diag, in)
+	enhanced, err := client.EnhanceDiagnosis(context.Background(), diag, in, "sess-test")
 	if err != nil {
 		t.Fatalf("应成功增强诊断：%v", err)
 	}
@@ -98,7 +98,7 @@ func TestEnhanceDiagnosisRejectsInventedNumbers(t *testing.T) {
 	})
 	defer srv.Close()
 
-	if _, err := client.EnhanceDiagnosis(context.Background(), diag, in); err == nil {
+	if _, err := client.EnhanceDiagnosis(context.Background(), diag, in, "sess-test"); err == nil {
 		t.Fatal("引入未提供数值的输出应被拒绝")
 	} else if !strings.Contains(err.Error(), "未提供的数值") {
 		t.Errorf("错误信息应说明原因，实际：%v", err)
@@ -129,7 +129,7 @@ func TestEnhanceDiagnosisFallsBackOnBadResponses(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			client, srv := testLLMClient(t, tc.handler)
 			defer srv.Close()
-			enhanced, err := client.EnhanceDiagnosis(context.Background(), diag, DiagnoseInput{Explanation: "x"})
+			enhanced, err := client.EnhanceDiagnosis(context.Background(), diag, DiagnoseInput{Explanation: "x"}, "sess-test")
 			if err == nil {
 				t.Fatal("异常响应应返回错误，以便上层回退到规则模板")
 			}
@@ -151,7 +151,7 @@ func TestLLMTimeoutIsBounded(t *testing.T) {
 	client.httpc.Timeout = 200 * time.Millisecond
 
 	start := time.Now()
-	_, err := client.Chat(context.Background(), "system", "user")
+	_, err := client.Chat(context.Background(), "system", "user", "sess-test")
 	if err == nil {
 		t.Fatal("超时应返回错误")
 	}
