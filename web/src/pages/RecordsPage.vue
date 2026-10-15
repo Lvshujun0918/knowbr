@@ -35,9 +35,16 @@ async function remove(id: string, title: string): Promise<void> {
   deletingId.value = id
   try {
     await api.deleteSession(id)
+    const removed = records.value.find((r) => r.id === id)
     records.value = records.value.filter((r) => r.id !== id)
     if (storage.value) {
-      storage.value = { ...storage.value, total: Math.max(0, storage.value.total - 1) }
+      // 说明文字里的三条计数必须同时跟着变，否则删除后会与列表实际条数不一致。
+      storage.value = {
+        ...storage.value,
+        total: Math.max(0, storage.value.total - 1),
+        demoRecords: Math.max(0, storage.value.demoRecords - (removed?.isDemo ? 1 : 0)),
+        realRecords: Math.max(0, storage.value.realRecords - (removed?.isDemo ? 0 : 1)),
+      }
     }
   } catch (err) {
     actionError.value = errorMessage(err)
