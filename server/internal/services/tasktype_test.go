@@ -18,6 +18,7 @@ func TestDetectTaskTypeForDemoCases(t *testing.T) {
 		"case-rnn-instability": content.TaskTraining,
 		"case-regression":      content.TaskRegression,
 		"case-clustering":      content.TaskClustering,
+		"case-leakage":         content.TaskDataPipeline,
 	}
 	for _, c := range content.DemoCases {
 		t.Run(c.ID, func(t *testing.T) {

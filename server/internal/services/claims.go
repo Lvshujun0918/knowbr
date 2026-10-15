@@ -498,6 +498,63 @@ var claimRules = []claimRule{
 		EvidenceBoundary: "还需要说明标准化后的分群是否稳定、是否仍有业务解释。",
 		NextQuestion:     "请说明你用了哪种标准化方式，并比较标准化前后的分群结果。",
 	},
+	{
+		Code:           "DP-LEAK",
+		TaskTypes:      []string{content.TaskDataPipeline},
+		KnowledgePoint: "预处理与划分的先后顺序",
+		Groups: []content.KeywordGroup{
+			{"全部数据", "全量数据", "整个数据集", "所有数据", "全局", "整体数据"},
+			{"划分", "切分", "训练集", "测试集", "再"},
+		},
+		Exclude:          []string{"先划分", "先切分", "只在训练集", "仅在训练集", "训练集上拟合"},
+		Status:           ClaimError,
+		Judgment:         "先用全部数据估计预处理参数，再划分训练集与测试集。",
+		Reason:           "标准化与填充的参数是从数据中学来的；用含测试集的全部数据估计参数，测试集信息会进入训练过程，评估指标偏乐观。",
+		EvidenceBoundary: "该顺序能跑通代码，但会高估泛化能力，无法支撑“可以直接上线”。",
+		NextQuestion:     "请改成先划分、只在训练集上拟合参数，再转换测试集，并说明改动前后指标是否会变化。",
+	},
+	{
+		Code:           "DP-LABEL-LEAK",
+		TaskTypes:      []string{content.TaskDataPipeline},
+		KnowledgePoint: "特征在预测时刻是否已知",
+		Groups: []content.KeywordGroup{
+			{"目标变量", "标签", "未来", "事后", "真实值", "最终"},
+			{"作为特征", "加入特征", "构造", "衍生", "参与训练", "输入特征"},
+		},
+		Exclude:          []string{"没有使用目标", "不含目标变量", "未使用标签", "删除了"},
+		Status:           ClaimError,
+		Judgment:         "把目标变量或事后才能得到的信息当成了特征。",
+		Reason:           "这类特征在预测时刻并不存在或未知，训练时等于把答案的一部分交给模型，离线指标虚高而上线不可用。",
+		EvidenceBoundary: "现有材料只能说明特征清单包含这些列，不能说明模型在预测时刻真的能拿到它们。",
+		NextQuestion:     "请逐列说明预测时刻该特征是否已知，并指出哪几列必须删除。",
+	},
+	{
+		Code:           "DP-CORRECT-ORDER",
+		TaskTypes:      []string{content.TaskDataPipeline},
+		KnowledgePoint: "预处理与划分的正确顺序",
+		Groups: []content.KeywordGroup{
+			{"先划分", "先切分", "只在训练集", "仅在训练集", "训练集上拟合", "避免泄漏", "没有泄漏", "无泄漏"},
+			{"标准化", "归一化", "填充", "fit", "transform", "参数", "预处理"},
+		},
+		Status:           ClaimMastered,
+		Judgment:         "描述了先划分、只在训练集上拟合参数的顺序。",
+		Reason:           "这是避免数据泄漏的标准做法：参数只在训练集上估计，测试集始终充当未见数据。",
+		EvidenceBoundary: "还需要检查特征层面是否引入了目标变量或未来信息。",
+		NextQuestion:     "请逐列检查特征在预测时刻是否已知，避免修好了划分顺序但仍有标签泄漏。",
+	},
+	{
+		Code:           "DP-MISSING",
+		TaskTypes:      []string{content.TaskDataPipeline},
+		KnowledgePoint: "缺失值与异常值的处理方式",
+		Groups: []content.KeywordGroup{
+			{"缺失值", "异常值", "填充", "插补", "删除", "中位数", "均值填充"},
+		},
+		Status:           ClaimPartial,
+		Judgment:         "提到了缺失值或异常值的处理。",
+		Reason:           "处理方式会改变数据分布与指标含义，需要说明选择依据，并把它纳入只在训练集上拟合的参数。",
+		EvidenceBoundary: "尚未说明填充值是用哪一部分数据估计的，也未比较处理前后的分布变化。",
+		NextQuestion:     "请说明填充参数是在训练集上估计的，并比较处理前后的特征分布与指标。",
+	},
 }
 
 var claimSentenceSplitter = regexp.MustCompile(`[。！？；\n!?;]+`)
@@ -722,6 +779,18 @@ func evidencePresent(name string, in DiagnoseInput) bool {
 	case strings.Contains(name, "业务解释") || strings.Contains(name, "稳定性"):
 		return containsAny(strings.ToLower(in.Explanation+in.MetricsText+in.ExecutionLog+in.DatasetDescription),
 			[]string{"业务", "含义", "画像", "对应", "代表", "随机种子", "重复", "稳定"})
+	case strings.Contains(name, "预处理") || strings.Contains(name, "划分的先后"):
+		return strings.TrimSpace(in.CodeSnippet) != "" || containsAny(strings.ToLower(in.CodeSnippet+in.MetricsText),
+			[]string{"train_test_split", "划分", "fit_transform", "scaler", "pipeline", "split"})
+	case strings.Contains(name, "特征清单"):
+		return containsAny(strings.ToLower(in.DatasetDescription+in.MetricsText+in.Explanation),
+			[]string{"特征", "列", "变量", "字段"})
+	case strings.Contains(name, "缺失值"):
+		return containsAny(strings.ToLower(in.DatasetDescription+in.CodeSnippet+in.MetricsText+in.ExecutionLog),
+			[]string{"缺失", "填充", "插补", "nan", "异常值"})
+	case strings.Contains(name, "上线流程") || strings.Contains(name, "评估方式"):
+		return containsAny(strings.ToLower(in.ExperimentGoal+in.MetricsText+in.Explanation),
+			[]string{"上线", "评估", "流程", "一致"})
 	case strings.Contains(name, "任务目标") || strings.Contains(name, "实验目标"):
 		return strings.TrimSpace(in.ExperimentGoal) != "" || strings.TrimSpace(in.DatasetDescription) != ""
 	case strings.Contains(name, "训练日志"):

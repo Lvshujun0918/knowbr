@@ -34,6 +34,10 @@ var taskSignals = map[string][]string{
 		"聚类", "kmeans", "k-means", "k均值", "轮廓系数", "silhouette", "惯性", "inertia",
 		"肘部", "无监督", "dbscan", "层次聚类", "分群", "簇",
 	},
+	content.TaskDataPipeline: {
+		"数据泄漏", "泄漏", "leakage", "预处理", "缺失值", "填充", "插补", "特征工程",
+		"特征构造", "数据清洗", "异常值", "pipeline", "先划分", "标准化", "归一化", "量纲", "特征清单",
+	},
 }
 
 // DetectTaskType 判定当前实验属于哪一类任务（需求文档 3.1「当前实验」上下文）。

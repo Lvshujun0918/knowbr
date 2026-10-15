@@ -9,6 +9,7 @@ const (
 	TaskClassification = "classification_metrics" // 分类指标与类别不平衡
 	TaskRegression     = "regression_metrics"     // 回归任务与误差指标
 	TaskClustering     = "clustering_metrics"     // 聚类任务与簇质量评估
+	TaskDataPipeline   = "data_preparation"      // 数据预处理与数据泄漏
 	TaskGeneric        = "generic"                // 未识别到明确任务类型
 )
 
@@ -167,6 +168,32 @@ var TaskTypes = []TaskType{
 			"说明特征标准化对距离度量的影响",
 		},
 		CompletenessNote: "聚类是无监督任务，不使用混淆矩阵、逐类召回率或回归误差指标。",
+	},
+	{
+		Code:  TaskDataPipeline,
+		Label: "数据预处理与数据泄漏",
+		FocusKnowledge: []string{
+			"预处理与划分的先后顺序（是否发生数据泄漏）",
+			"特征是否引入目标变量或未来信息",
+			"缺失值与异常值的处理方式及其影响",
+			"离线评估流程与上线使用流程是否一致",
+		},
+		Evidence: []EvidenceSpec{
+			{Name: "学生自己的实验解释", Required: true, Impact: "没有学生自己的判断就无法诊断其理解情况。"},
+			{Name: "预处理与划分的先后顺序说明", Required: true, Impact: "不知道参数是用哪一部分数据估计的，无法判断是否发生了数据泄漏。"},
+			{Name: "特征清单与预测目标的说明", Required: true, Impact: "没有特征清单时无法检查是否引入了目标变量或未来信息。"},
+			{Name: "缺失值与异常值的处理方式", Required: false, Optional: "有处理说明时才能讨论填充值对分布与指标的影响。"},
+			{Name: "评估方式与上线流程的一致性", Required: false, Optional: "有评估与上线流程说明时才能讨论两条路径是否一致。"},
+		},
+		OffTopic: []string{
+			"混淆矩阵与逐类召回率/精确率/F1", "类别不平衡下的指标轮换",
+			"回归误差的量纲与基线对照", "聚类内部指标与簇数选择", "梯度裁剪与训练稳定性",
+		},
+		NextLearning: []string{
+			"把“先划分、只在训练集上拟合、再转换测试集”写进 Pipeline",
+			"逐列检查特征在预测时刻是否已经确定",
+		},
+		CompletenessNote: "预处理任务的核心证据是预处理与划分的先后顺序、特征清单与评估流程；不要求混淆矩阵、逐类指标或聚类/回归专用指标。",
 	},
 	{
 		Code:  TaskGeneric,

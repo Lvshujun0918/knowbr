@@ -198,6 +198,30 @@ var clusteringEvidenceGroups = []evidenceGroup{
 	},
 }
 
+// dataPipelineEvidenceGroups 适用于数据预处理与数据泄漏任务。
+var dataPipelineEvidenceGroups = []evidenceGroup{
+	{
+		Name:          "预处理与划分的先后顺序",
+		Words:         []string{"先划分", "先切分", "只在训练集", "仅在训练集", "训练集上拟合", "顺序", "先后", "流程"},
+		MissingAdvice: "还没有说明预处理与划分的先后顺序（应先划分、只在训练集上拟合参数）",
+	},
+	{
+		Name:          "特征在预测时刻是否已知",
+		Words:         []string{"目标变量", "标签", "未来", "事后", "真实值", "逐列", "已知", "预测时刻"},
+		MissingAdvice: "还没有逐列检查特征在预测时刻是否已知（是否含目标变量或未来信息）",
+	},
+	{
+		Name:          "缺失值与异常值的处理方式",
+		Words:         []string{"缺失值", "异常值", "填充", "插补", "删除", "中位数", "均值填充"},
+		MissingAdvice: "还没有说明缺失值与异常值的处理方式及其对分布的影响",
+	},
+	{
+		Name:          "评估流程与上线流程的一致性",
+		Words:         []string{"上线", "评估", "一致", "同一条", "Pipeline", "pipeline", "流程", "推理"},
+		MissingAdvice: "还没有说明离线评估流程与上线使用流程是否一致",
+	},
+}
+
 // genericEvidenceGroups 用于任务类型不明确的情况：只考查结论与证据的对应关系。
 var genericEvidenceGroups = []evidenceGroup{
 	{
@@ -225,6 +249,8 @@ func EvidenceGroupsFor(taskType string) []evidenceGroup {
 		return regressionEvidenceGroups
 	case content.TaskClustering:
 		return clusteringEvidenceGroups
+	case content.TaskDataPipeline:
+		return dataPipelineEvidenceGroups
 	case content.TaskGeneric:
 		return genericEvidenceGroups
 	default:

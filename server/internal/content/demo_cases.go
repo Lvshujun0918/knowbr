@@ -256,6 +256,42 @@ print("silhouette:", silhouette_score(X, labels))`,
 			Question:                  "轮廓系数这个数值，能不能说明分出来的群有业务意义？",
 		},
 	},
+	{
+		ID:          "case-leakage",
+		Name:        "案例十：先标准化后划分的数据泄漏（模拟数据）",
+		Description: "用户在划分训练集与测试集之前，用全部数据完成了标准化与缺失值填充，报告测试集 AUC = 0.93；把流程改成“先划分、只在训练集上拟合参数”后，同一模型的 AUC 下降 8 个百分点。用于演示预处理与划分顺序导致的数据泄漏（E15）。",
+		DataNotice:  DemoDataNotice,
+		ExpectedFocus: []string{
+			"标准化与填充的参数应在划分之后、只在训练集上估计",
+			"用全部数据估参数会把测试集信息带进训练过程",
+			"指标下降不等于模型变差，而是回到可信水平",
+		},
+		Submission: DemoSubmission{
+			ExperimentTitle:    "用户流失预测实验",
+			ExperimentGoal:     "预测用户下月是否流失，用于提前做挽留运营。",
+			DatasetDescription: "某 App 用户行为数据 12000 条，36 个特征（访问频次、使用时长、会员等级等），部分特征存在缺失值。",
+			ModelName:          "逻辑回归（标准化后训练）",
+			CodeSnippet: `from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+
+# 先用全部数据做填充与标准化，再划分训练集与测试集
+imputer = SimpleImputer(strategy="mean")
+scaler = StandardScaler()
+X_filled = imputer.fit_transform(X)
+X_scaled = scaler.fit_transform(X_filled)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=0)
+model = LogisticRegression().fit(X_train, y_train)
+print("test AUC:", roc_auc_score(y_test, model.predict_proba(X_test)[:, 1]))`,
+			ExecutionLog: `test AUC: 0.93
+（以上为人工构造的模拟教学数据，不是真实训练结果）`,
+			MetricsText:               "测试集 AUC = 0.93；标准化与缺失值填充都在划分之前用全部数据完成；改成先划分后，同一模型 AUC 下降 8 个百分点。",
+			StudentInitialExplanation: "我先用全部数据做了缺失值填充和标准化，然后再划分训练集与测试集，测试集 AUC 达到 0.93，说明模型效果很好，可以直接上线了。",
+			Question:                  "这样做出来的 AUC，能代表模型上线后的真实效果吗？",
+		},
+	},
 }
 
 // DemoCaseByID 按编号查找演示案例。
