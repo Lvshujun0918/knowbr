@@ -1766,6 +1766,20 @@
   .table-scroll {
     -webkit-overflow-scrolling: touch;
   }
+
+  /* 窄屏下数据表改为横向滚动，而不是把列挤成逐字换行（记录标题曾被挤成五行）。
+     矩阵编辑表（.table--edit）已专门适配窄屏，不参与此规则。 */
+  .table-scroll > .table:not(.table--edit) {
+    min-width: 620px;
+  }
+
+  .table--records {
+    min-width: 820px;
+  }
+
+  .record-title {
+    white-space: nowrap;
+  }
 }
 
 .coverage-tags {
