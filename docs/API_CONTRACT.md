@@ -147,6 +147,34 @@ RecordDTO：`{ id, title, createdAt, updatedAt, status, statusLabel, mode, modeL
 成功 `{ ok:true, hint:{...}, hints:[...], hintState:{...}, alreadyProvided:false }`
 等级非法 → 400 `HINT_LEVEL_INVALID`。
 
+### 智能体决策
+
+- `GET /api/sessions/:id/agent` → `{ ok:true, agent: AgentStep }`（只读，不产生任何副作用）
+- `POST /api/sessions/:id/agent/step` → 先决策再执行可执行的动作：
+  `{ ok:true, agent: AgentStep, executed:true|false, executedNote:"中文说明", hint?:Hint, hints?:[...], hintState?:{...}, session: Session }`
+
+**AgentStep**
+```json
+{
+  "action": "ask_evidence|give_hint|verify_revision|advance_transfer|escalate|complete",
+  "actionLabel": "给出下一级提示", "title": "一句话说明这一步做什么",
+  "reason": "为什么这样决定（引用证据状态、提示/修正记录与记忆）",
+  "requires": ["需要学生补充的必需材料"],
+  "suggestHintLevel": 1, "blocked": false, "blockedReason": "", "canAct": true,
+  "plan": [{"step":"submit","title":"提交实验材料","status":"done|current|pending","note":""}],
+  "tools": [{"name":"evidence_check","purpose":"工具用途","result":"工具返回的关键结果"}],
+  "memory": {"lookedAt":2,"repeated":[{"code":"E1","label":"…","count":2,"advice":"…"}],"mastered":[],"milestones":[],"note":"记忆来源局限说明"},
+  "decidedAt": "RFC3339", "policyNote": "本步骤由确定性策略引擎计算得出…"
+}
+```
+
+约定：
+
+- `action` 由策略引擎按优先级选定：迁移题已作答→`complete`；已出题未作答→`advance_transfer`；**必需证据缺失且尚未使用提示→`ask_evidence`（`blocked=true`、`canAct=false`、`suggestHintLevel=0`，拒绝在证据不足时给出具体计算示例）**；连续无进展≥2 轮→`escalate`；仍有未解决主张→`give_hint`；否则等待修正解释。
+- `give_hint` 时 `POST /agent/step` 会按 `suggestHintLevel` **自动**生成提示（`requestedByStudent=false`）；`escalate` 时写入教师介入标记，重复调用不重复记录；其余动作不改变会话状态，仅返回决策。
+- `tools` 是真实执行的工具轨迹（证据完备性、混淆矩阵指标、提示与修正进度、本机历史查询），不是装饰性文案；未提交矩阵时指标工具明确返回“未计算”。
+- `memory` 来自本机历史记录，用于识别重复误区与已掌握知识点；本项目无账号体系，**无法确认历史记录是否属于同一名学生**，`memory.note` 会如实说明这一点，前端必须原样展示。
+
 ### POST /api/sessions/:id/revisions
 请求 `{ "content": "学生修正后的解释" }`；空内容 → 400 `REVISION_EMPTY`。
 成功 `{ ok:true, revision:{...}, revisions:[...], hintState:{...}, improved:false }`
