@@ -6,7 +6,7 @@ SHELL := /bin/bash
 SERVER_DIR := server
 WEB_DIR := web
 
-.PHONY: help check check-server check-web test vet build web-install web-test web-build smoke run dev docker-up clean
+.PHONY: help check check-server check-web test vet build web-install web-test web-build smoke eval run dev docker-up clean
 
 SMOKE_URL ?= http://127.0.0.1:8080
 
@@ -15,6 +15,7 @@ help:
 	@echo "make check-server # 仅后端：vet + test + build"
 	@echo "make check-web    # 仅前端：单元测试 + vue-tsc --noEmit + vite build"
 	@echo "make smoke        # 界面冒烟：用真实浏览器点击一遍核心流程（需先启动服务，另需 Bun ≥1.4）"
+	@echo "make eval         # 重跑预置案例评测矩阵并重生 docs/EVALUATION.md"
 	@echo "make run          # 单端口演示：构建前端后由后端托管，访问 http://127.0.0.1:8080"
 	@echo "make dev          # 开发模式：后端 8080 + Vite 5173（两个前台进程，建议分终端运行）"
 	@echo "make docker-up    # 用 Docker Compose 启动（自动构建前后端）"
@@ -52,6 +53,11 @@ run: web-build
 smoke:
 	@echo "前置：另开终端运行 cd $(SERVER_DIR) && go run ."
 	bun scripts/ui-smoke.mjs $(SMOKE_URL)
+
+# 预置案例评测矩阵：跑完 10 个案例并重生 docs/EVALUATION.md。
+# 加 -count=1：这个测试有“生成文件”的副作用，不能读缓存。
+eval:
+	cd $(SERVER_DIR) && ZXQ_WRITE_EVAL=1 go test ./internal/api -run TestDemoCaseEvaluationMatrix -count=1
 
 dev:
 	@echo "请分两个终端运行："

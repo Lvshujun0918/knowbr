@@ -463,7 +463,7 @@ func detectContradiction(text string, metrics *MatrixMetrics) Contradiction {
 
 func buildMainIssue(in DiagnoseInput, taskType string, primary *content.Archetype, contra Contradiction, claims []Claim) string {
 	if contra.Detected {
-		return fmt.Sprintf("解释中的结论与混淆矩阵证据矛盾：%s", contra.Claim)
+		return ensureSentenceEnd(fmt.Sprintf("解释中的结论与混淆矩阵证据矛盾：%s", contra.Claim))
 	}
 	if primary != nil {
 		switch primary.Code {
@@ -491,8 +491,20 @@ func buildMainIssue(in DiagnoseInput, taskType string, primary *content.Archetyp
 			return "认为增加模型容量就必然提升性能，没有考虑数据规模、正则化与训练集/测试集表现的差异。"
 		case "E10":
 			return "只用单一测试结果下结论，没有比较训练集与测试集的表现，无法区分拟合能力差异与泛化差异。"
+		case "E11":
+			return "用 R² 代替误差量级判断模型可用性，没有把误差换算到目标变量的单位并对照任务允许范围。"
+		case "E12":
+			return "只在训练过的同一批数据上评估误差，并用它推断模型在新数据上的表现，缺少留出验证集或交叉验证。"
+		case "E13":
+			return "用需要真实标签的指标评价聚类结果，混淆了有监督与无监督任务的评价方式。"
+		case "E14":
+			return "只看轮廓系数或惯性的数值就断定分群可用，没有结合簇数、特征处理与业务解释。"
+		case "E15":
+			return "先用全部数据估计标准化与填充参数、再划分训练集与测试集，测试集信息因此进入了训练过程（数据泄漏）。"
+		case "E16":
+			return "把目标变量或只在结果发生之后才能观测到的信息当作特征，导致离线指标虚高。"
 		}
-		return primary.Name
+		return ensureSentenceEnd(primary.Name)
 	}
 	if in.Metrics != nil {
 		if in.Metrics.Imbalanced && !containsAny(strings.ToLower(in.Explanation), []string{"不平衡", "多数类", "少数类", "召回率", "recall", "非对角"}) {
@@ -505,7 +517,7 @@ func buildMainIssue(in DiagnoseInput, taskType string, primary *content.Archetyp
 	if id := primaryClaimID(claims); id != "" {
 		for _, c := range claims {
 			if c.ID == id {
-				return fmt.Sprintf("你的解释中「%s」这一点尚未解决：%s", c.KnowledgePoint, c.Judgment)
+				return ensureSentenceEnd(fmt.Sprintf("你的解释中「%s」这一点尚未解决：%s", c.KnowledgePoint, c.Judgment))
 			}
 		}
 	}
@@ -568,6 +580,19 @@ func judgeMasteryFromClaims(claims []Claim) string {
 	default:
 		return MasteryInsufficient
 	}
+}
+
+// ensureSentenceEnd 让“主要问题”始终以句末标点结尾，避免这一行读起来像半句话。
+func ensureSentenceEnd(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	switch s[len(s)-3:] {
+	case "。", "！", "？":
+		return s
+	}
+	return s + "。"
 }
 
 func buildNextStep(in DiagnoseInput, taskType string, primary *content.Archetype, contra Contradiction, claims []Claim) string {
