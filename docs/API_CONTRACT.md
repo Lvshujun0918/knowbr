@@ -100,7 +100,7 @@
 **Diagnosis**
 ```json
 {
-  "taskType": "classification_metrics|model_architecture|training_stability|code_environment|regression_metrics|clustering_metrics|generic",
+  "taskType": "classification_metrics|model_architecture|training_stability|code_environment|regression_metrics|clustering_metrics|data_preparation|generic",
   "taskTypeLabel": "训练稳定性与优化",
   "taskFocus": ["本任务优先讨论的知识点"],
   "taskOffTopic": ["本任务不应要求的其它任务知识点"],
@@ -129,7 +129,7 @@
 
 约定：
 
-- `taskType` 由提交材料判定（标题/目标、运行日志、代码、解释、数据描述加权），诊断、提示、迁移题与修正反馈都限定在该任务类型的知识范围内：训练稳定性任务不会要求混淆矩阵或分类指标；回归任务（`regression_metrics`：误差量纲、泛化估计、基线对照）不会要求混淆矩阵、逐类召回率或类别不平衡；聚类任务（`clustering_metrics`：无监督任务的评价方式、簇数与业务含义、标准化与稳定性）不会要求混淆矩阵、逐类指标或回归误差指标。
+- `taskType` 由提交材料判定（标题/目标、运行日志、代码、解释、数据描述加权），诊断、提示、迁移题与修正反馈都限定在该任务类型的知识范围内：训练稳定性任务不会要求混淆矩阵或分类指标；回归任务（`regression_metrics`：误差量纲、泛化估计、基线对照）不会要求混淆矩阵、逐类召回率或类别不平衡；聚类任务（`clustering_metrics`：无监督任务的评价方式、簇数与业务含义、标准化与稳定性）不会要求混淆矩阵、逐类指标或回归误差指标；预处理任务（`data_preparation`：预处理与划分的顺序、特征在预测时刻的可得性、评估流程一致性）不会要求混淆矩阵、逐类指标、聚类内部指标或回归误差指标。
 - `claims` 是学生的逐条主张，每条都带证据、判断、原因、证据边界与下一步追问；`knowledge` 使用六种状态，`not_mentioned` 不会被计入缺陷。
 - `evidenceNeeds` 区分必需与可选材料，缺失时 `impact` 说明限制了哪些结论。
 
