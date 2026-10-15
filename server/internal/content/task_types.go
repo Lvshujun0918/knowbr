@@ -7,6 +7,7 @@ const (
 	TaskTraining       = "training_stability"     // 训练稳定性（损失、梯度、学习率）
 	TaskArchitecture   = "model_architecture"     // 模型结构与容量
 	TaskClassification = "classification_metrics" // 分类指标与类别不平衡
+	TaskRegression     = "regression_metrics"     // 回归任务与误差指标
 	TaskGeneric        = "generic"                // 未识别到明确任务类型
 )
 
@@ -113,6 +114,32 @@ var TaskTypes = []TaskType{
 		OffTopic:         []string{"训练稳定性与梯度", "模型结构的归纳偏置"},
 		NextLearning:     []string{"逐类计算召回率并解释错误去向", "结合任务目标说明哪种错误更不能接受"},
 		CompletenessNote: "分类指标任务的核心证据是逐类结果与类别分布。",
+	},
+	{
+		Code:  TaskRegression,
+		Label: "回归任务与误差指标",
+		FocusKnowledge: []string{
+			"误差数值在目标变量单位下的含义",
+			"误差是否满足任务可接受范围",
+			"训练集与验证集表现差异（过拟合与泛化）",
+			"与简单基线的对照",
+		},
+		Evidence: []EvidenceSpec{
+			{Name: "学生自己的实验解释", Required: true, Impact: "没有学生自己的判断就无法诊断其理解情况。"},
+			{Name: "误差指标结果（MAE / RMSE / R² 等）", Required: true, Impact: "没有误差数值时无法判断模型误差是否在任务可接受范围内。"},
+			{Name: "数据规模与目标变量的取值范围", Required: true, Impact: "不知道目标变量的量纲时，误差数值的大小无法解释。"},
+			{Name: "留出验证集或交叉验证的做法", Required: false, Optional: "有划分说明时才能讨论泛化与过拟合。"},
+			{Name: "简单基线的结果", Required: false, Optional: "有基线对照时才能说明模型是否比“直接预测平均值”更好。"},
+		},
+		OffTopic: []string{
+			"混淆矩阵与逐类召回率/精确率/F1", "类别不平衡下的指标轮换",
+			"梯度裁剪与训练稳定性", "疾病筛查的漏诊与误报",
+		},
+		NextLearning: []string{
+			"把误差数值换算回目标变量的单位并说明业务含义",
+			"用留出验证集或交叉验证的结果判断是否过拟合",
+		},
+		CompletenessNote: "回归任务的核心证据是误差指标与目标变量的量纲，不使用混淆矩阵或逐类指标。",
 	},
 	{
 		Code:  TaskGeneric,

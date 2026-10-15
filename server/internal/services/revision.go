@@ -145,6 +145,35 @@ var envEvidenceGroups = []evidenceGroup{
 	},
 }
 
+// regressionEvidenceGroups 适用于回归与误差指标任务。
+var regressionEvidenceGroups = []evidenceGroup{
+	{
+		Name:          "误差数值的单位与相对量级",
+		Words:         []string{"单位", "万元", "千瓦时", "量纲", "相对", "百分比", "百分之", "占比", "均值", "平均值"},
+		MissingAdvice: "还没有把 MAE / RMSE 换算成目标变量的单位与相对量级",
+	},
+	{
+		Name:          "任务可接受的误差范围",
+		Words:         []string{"可接受", "允许", "阈值", "上限", "范围", "业务要求", "容忍", "标准"},
+		MissingAdvice: "还没有说明本任务可以接受多大的误差（来自任务书或业务要求）",
+	},
+	{
+		Name:          "训练集与验证集表现的比较",
+		Words:         []string{"验证集", "测试集", "交叉验证", "留出", "划分", "过拟合", "泛化", "未见", "新数据"},
+		MissingAdvice: "还没有给出留出验证集或交叉验证的结果来说明泛化表现",
+	},
+	{
+		Name:          "与简单基线的对照",
+		Words:         []string{"基线", "对照", "预测均值", "历史均值", "简单模型", "随机", "恒等"},
+		MissingAdvice: "还没有与一个简单基线（例如始终预测平均值）对照",
+	},
+	{
+		Name:          "结论的适用条件",
+		Words:         []string{"适用", "不成立", "失效", "外推", "场景", "条件"},
+		MissingAdvice: "还没有说明这个误差结论在什么数据或场景下会不成立",
+	},
+}
+
 // genericEvidenceGroups 用于任务类型不明确的情况：只考查结论与证据的对应关系。
 var genericEvidenceGroups = []evidenceGroup{
 	{
@@ -168,6 +197,8 @@ func EvidenceGroupsFor(taskType string) []evidenceGroup {
 		return architectureEvidenceGroups
 	case content.TaskCodeEnv:
 		return envEvidenceGroups
+	case content.TaskRegression:
+		return regressionEvidenceGroups
 	case content.TaskGeneric:
 		return genericEvidenceGroups
 	default:

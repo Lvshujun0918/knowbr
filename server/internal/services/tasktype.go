@@ -26,6 +26,10 @@ var taskSignals = map[string][]string{
 		"准确率", "accuracy", "混淆矩阵", "召回", "精确", "f1", "分类", "类别", "样本",
 		"precision", "recall", "不平衡",
 	},
+	content.TaskRegression: {
+		"回归", "预测值", "房价", "成交量", "气温", "用电量", "mae", "mse", "rmse", "r2", "r²",
+		"决定系数", "均方误差", "平均绝对误差", "残差", "拟合优度", "目标变量", "连续值",
+	},
 }
 
 // DetectTaskType 判定当前实验属于哪一类任务（需求文档 3.1「当前实验」上下文）。

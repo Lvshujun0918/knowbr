@@ -399,6 +399,49 @@ var claimRules = []claimRule{
 		EvidenceBoundary: "现有材料只能核对数值本身，无法据此判断各类别表现。",
 		NextQuestion:     "请说明这个数值是在什么条件下得到的，以及它无法回答哪个问题。",
 	},
+	{
+		Code:           "RG-R2-ONLY",
+		TaskTypes:      []string{content.TaskRegression},
+		KnowledgePoint: "误差指标与任务可接受范围",
+		Groups: []content.KeywordGroup{
+			{"r2", "r²", "决定系数", "拟合优度"},
+			{"很好", "不错", "可以", "够用", "直接用", "没问题", "误差很小"},
+		},
+		Status:           ClaimError,
+		Judgment:         "只用 R² 或“误差很小”就断定模型可用。",
+		Reason:           "R² 衡量模型解释了目标变量多少比例的方差，它不携带误差的量纲，也无法说明这个误差在业务上能否接受；能否使用必须回到 MAE / RMSE 的绝对量级与任务允许范围。",
+		EvidenceBoundary: "现有材料能说明训练集上的拟合程度，不足以说明在未见过数据上的偏差。",
+		NextQuestion:     "请把 MAE 或 RMSE 换算成目标变量的单位，并说明本任务可以接受的误差上限是多少。",
+	},
+	{
+		Code:           "RG-TRAIN-ONLY",
+		TaskTypes:      []string{content.TaskRegression},
+		KnowledgePoint: "训练集与验证集表现差异",
+		Groups: []content.KeywordGroup{
+			{"训练集", "训练数据", "同一批数据", "全量数据"},
+			{"误差", "mae", "rmse", "mse"},
+		},
+		Exclude:          []string{"验证集", "测试集", "泛化", "划分", "过拟合", "未见", "新数据"},
+		Status:           ClaimError,
+		Judgment:         "用训练集上的误差代替对未见过数据的估计。",
+		Reason:           "在训练数据上评估误差会低估真实误差：模型可能记住了训练样本。回归任务应当报告留出验证集或交叉验证上的误差。",
+		EvidenceBoundary: "当前只有训练集指标，无法据此判断泛化表现。",
+		NextQuestion:     "请说明你会如何留出验证集或做交叉验证，并给出验证集上要报告的误差指标。",
+	},
+	{
+		Code:           "RG-UNIT",
+		TaskTypes:      []string{content.TaskRegression},
+		KnowledgePoint: "误差数值的业务含义",
+		Groups: []content.KeywordGroup{
+			{"mae", "rmse", "均方误差", "平均绝对误差", "误差"},
+			{"单位", "万元", "千瓦时", "量纲", "相对", "百分比", "百分之", "占比"},
+		},
+		Status:           ClaimMastered,
+		Judgment:         "把误差数值换算成了可解释的量级。",
+		Reason:           "误差只有在目标变量的单位与相对量级下才能判断是否可接受，这一步说明解释已经落到业务含义上。",
+		EvidenceBoundary: "还需要说明该误差是否满足任务的可接受标准。",
+		NextQuestion:     "请写出本任务可接受的误差上限，并说明它来自哪一条业务要求。",
+	},
 }
 
 var claimSentenceSplitter = regexp.MustCompile(`[。！？；\n!?;]+`)

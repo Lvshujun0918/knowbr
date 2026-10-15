@@ -353,6 +353,7 @@ func TestAllDemoCasesProduceUsableDiagnosis(t *testing.T) {
 		"case-accuracy-only":   "NONE",
 		"case-mlp-cnn":         "E8",
 		"case-rnn-instability": "E6",
+		"case-regression":      "E11",
 	}
 	for _, c := range content.DemoCases {
 		t.Run(c.ID, func(t *testing.T) {

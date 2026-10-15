@@ -197,6 +197,37 @@ epoch 5 train_loss=nan grad_norm=nan
 			Question:                  "我该怎么判断是不是梯度爆炸？还需要补什么实验？",
 		},
 	},
+	{
+		ID:          "case-regression",
+		Name:        "案例八：回归任务只看训练集误差（模拟数据）",
+		Description: "二手房成交价预测中，学生在同一批数据上训练并评估，报告 R² = 0.93、MAE = 4.8 万元，据此认为模型可以上线；没有划分验证集，也没有与基线对照。用于演示回归任务中误差量纲、泛化估计与验收标准三类问题。",
+		DataNotice:  DemoDataNotice,
+		ExpectedFocus: []string{
+			"误差数值要换算成目标变量的单位与相对量级",
+			"训练集误差不等于泛化误差",
+			"需要留出验证集与基线对照才能谈上线",
+		},
+		Submission: DemoSubmission{
+			ExperimentTitle:    "房价预测回归实验",
+			ExperimentGoal:     "预测二手房成交价（单位：万元），判断模型能否用于线上报价参考。",
+			DatasetDescription: "某城市二手房成交数据 4200 条，目标变量为成交价、单位万元，全量样本的均价约 15 万元。",
+			ModelName:          "随机森林回归（默认参数，未划分验证集）",
+			CodeSnippet: `from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, r2_score
+
+model = RandomForestRegressor(random_state=0)
+model.fit(X, y)            # 在全量数据上训练
+pred = model.predict(X)    # 又在同一批数据上评估
+print("MAE:", mean_absolute_error(y, pred))
+print("R2:", r2_score(y, pred))`,
+			ExecutionLog: `MAE: 4.8
+R2: 0.93
+（以上为人工构造的模拟教学数据，不是真实训练结果）`,
+			MetricsText:               "训练集 MAE = 4.8（万元），R² = 0.93；未计算验证集指标，也没有基线对照。",
+			StudentInitialExplanation: "我在训练集上算出的 R² 达到 0.93，MAE 只有 4.8 万元，误差很小，所以模型可以直接用来给房子定价了。",
+			Question:                  "R² 这么高、误差看着也小，为什么我还是不确定它上线后准不准？",
+		},
+	},
 }
 
 // DemoCaseByID 按编号查找演示案例。

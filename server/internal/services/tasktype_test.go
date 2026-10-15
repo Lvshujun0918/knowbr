@@ -16,6 +16,7 @@ func TestDetectTaskTypeForDemoCases(t *testing.T) {
 		"case-env-error":       content.TaskCodeEnv,
 		"case-mlp-cnn":         content.TaskArchitecture,
 		"case-rnn-instability": content.TaskTraining,
+		"case-regression":      content.TaskRegression,
 	}
 	for _, c := range content.DemoCases {
 		t.Run(c.ID, func(t *testing.T) {
