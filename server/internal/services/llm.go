@@ -226,8 +226,8 @@ func (c *LLMClient) EnhanceDiagnosis(ctx context.Context, diag Diagnosis, in Dia
 		return diag, errors.New("大模型返回内容结构不完整，已回退规则模板")
 	}
 	allowed := allowedNumbers(diag, in)
-	if !numbersGrounded(payload.MainIssue+" "+payload.Reasoning+" "+payload.NextStep, allowed) {
-		return diag, errors.New("大模型输出引入了未提供的数值，已回退规则模板")
+	if bad, _ := ungroundedNumber(payload.MainIssue+" "+payload.Reasoning+" "+payload.NextStep, allowed); bad != "" {
+		return diag, fmt.Errorf("大模型输出引入了未提供的数值「%s」，已回退规则模板", bad)
 	}
 	enhanced := diag
 	enhanced.MainIssue = payload.MainIssue
@@ -255,8 +255,8 @@ func (c *LLMClient) EnhanceSummary(ctx context.Context, summary Summary, session
 	if len([]rune(out)) < 30 {
 		return summary.TeacherSummary, errors.New("大模型返回内容过短，保留规则版本")
 	}
-	if !numbersGrounded(out, allowedNumbersFromSummary(summary)) {
-		return summary.TeacherSummary, errors.New("大模型输出引入了未提供的数值，保留规则版本")
+	if bad, _ := ungroundedNumber(out, allowedNumbersFromSummary(summary)); bad != "" {
+		return summary.TeacherSummary, fmt.Errorf("大模型输出引入了未提供的数值「%s」，保留规则版本", bad)
 	}
 	return out, nil
 }
@@ -288,7 +288,12 @@ func allowedNumbers(diag Diagnosis, in DiagnoseInput) map[string]bool {
 			add(c.F1)
 		}
 	}
-	for _, s := range []string{in.Explanation, in.Question, in.MetricsText, in.ExecutionLog, strings.Join(diag.Evidence, " "), diag.MainIssue, diag.Reasoning, diag.NextStep} {
+	// 学生自己提交的所有文本都算“已提供的数值”：模型只是复述它们不算编造。
+	for _, s := range []string{
+		in.ExperimentTitle, in.ExperimentGoal, in.DatasetDescription, in.ModelName,
+		in.CodeSnippet, in.ExecutionLog, in.MetricsText, in.Explanation, in.Question,
+		strings.Join(diag.Evidence, " "), diag.MainIssue, diag.Reasoning, diag.NextStep,
+	} {
 		for _, m := range numberPatternLLM.FindAllString(s, -1) {
 			set[m] = true
 		}
@@ -308,6 +313,12 @@ func allowedNumbersFromSummary(s Summary) map[string]bool {
 
 // numbersGrounded 检查模型输出中的数字是否都出现在允许范围内（防止编造指标）。
 func numbersGrounded(text string, allowed map[string]bool) bool {
+	_, bad := ungroundedNumber(text, allowed)
+	return bad == ""
+}
+
+// ungroundedNumber 返回第一个不在允许范围内的数字，供回退原因使用，便于定位模型具体编造了什么。
+func ungroundedNumber(text string, allowed map[string]bool) (string, string) {
 	for _, m := range numberPatternLLM.FindAllString(text, -1) {
 		if allowed[m] {
 			continue
@@ -324,13 +335,15 @@ func numbersGrounded(text string, allowed map[string]bool) bool {
 				continue
 			}
 		}
-		// 允许常见序数/比例表达
-		if len(m) <= 2 {
+		// 只放行单个数字：它们通常是“第 3 轮”“2 类”这类序数与数量表达，不构成指标。
+		// 两位及以上的数值必须能在学生提交的材料或规则引擎文本中找到，
+		// 因此“准确率 97%”这类编造的两位数指标会被拦住并回退规则模式。
+		if len(m) == 1 {
 			continue
 		}
-		return false
+		return m, text
 	}
-	return true
+	return "", ""
 }
 
 func unmarshalJSONBlock(raw string, target any) error {

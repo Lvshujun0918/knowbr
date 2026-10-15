@@ -171,4 +171,32 @@ func TestNumbersGrounded(t *testing.T) {
 	if !numbersGrounded("请查看混淆矩阵第 2 行。", allowed) {
 		t.Error("短序号（如行号）不应被视为编造指标")
 	}
+	// 两位数的编造指标必须被拦住：这是此前的漏洞（任何 ≤2 位数字都被放行）。
+	if numbersGrounded("准确率高达 97%，模型可以直接上线。", allowed) {
+		t.Error("编造的两位数指标（97%）必须被拒绝")
+	}
+	if numbersGrounded("训练 12 轮后损失收敛。", allowed) {
+		t.Error("材料中未出现的两位数应被拒绝")
+	}
+	// 材料里出现过的数值仍然可以通过（含小数与百位以上）。
+	if !numbersGrounded("总样本 1000 个，准确率 90%。", allowed) {
+		t.Error("材料中出现过的数值应通过")
+	}
+}
+
+// 回退原因要能解释具体是哪一类校验失败，而不是笼统的“调用失败”。
+func TestGroundedRejectionReasonIsSpecific(t *testing.T) {
+	diag := Diagnose(demoInput(t))
+	metrics, err := ComputeMetrics(coreDemoMatrix(), []string{"类别A", "类别B", "类别C"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := DiagnoseInput{Explanation: "准确率 90%，效果很好。", Metrics: metrics, HaveMatrix: true}
+	allowed := allowedNumbers(diag, in)
+	if numbersGrounded("准确率 97%，说明模型可用。", allowed) {
+		t.Fatal("用例前提不成立：97 应被判为未提供的数值")
+	}
+	if !numbersGrounded(diag.MainIssue+" "+diag.Reasoning, allowed) {
+		t.Error("规则引擎自己的结论必须通过数值校验")
+	}
 }
